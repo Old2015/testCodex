@@ -150,13 +150,15 @@ createSigLabel(_isLong)=>
         label.delete(rm)
 
 updateSigLabels()=>
-    for i = 0 to array.size(sigLabels) - 1
-        label lb  = array.get(sigLabels, i)
-        int   idx = array.get(sigBars,   i)
-        bool  lg  = array.get(sigIsLong, i)
-        int   diff = bar_index - idx
-        float yNew = lg ? low[diff] * 0.98 : high[diff] * 1.02
-        label.set_xy(lb, idx, yNew)
+    int sz = array.size(sigLabels)
+    if sz > 0
+        for i = 0 to sz - 1
+            label lb  = array.get(sigLabels, i)
+            int   idx = array.get(sigBars,   i)
+            bool  lg  = array.get(sigIsLong, i)
+            int   diff = bar_index - idx
+            float yNew = lg ? low[diff] * 0.98 : high[diff] * 1.02
+            label.set_xy(lb, idx, yNew)
 
 if longSignal
     createSigLabel(true)
