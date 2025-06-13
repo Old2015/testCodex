@@ -128,23 +128,41 @@ barcolor(longSignal  ? color.new(color.green,0)
        : shortSignal ? color.new(color.red,0) : na)
 
 // — rolling buffer of labels —
-var label[] sigLabels = array.new<label>()
+// keep last `maxLabels` labels and update their positions every bar
+var label[] sigLabels   = array.new<label>()
+var int[]   sigBars     = array.new<int>()
+var bool[]  sigIsLong   = array.new<bool>()
+
 createSigLabel(_isLong)=>
     string t  = _isLong ? "Long" : "Short"
     color  c  = _isLong ? color.green : color.red
-    float  y  = _isLong ? low*0.98 : high*1.02
-    label  lb = label.new(bar_index,y,text=t,xloc=xloc.bar_index,yloc=yloc.price,
-                          style=_isLong?label.style_label_up:label.style_label_down,
-                          color=c,size=size.normal)
-    array.push(sigLabels,lb)
+    float  y  = _isLong ? low * 0.98 : high * 1.02
+    label  lb = label.new(bar_index, y, text=t, xloc=xloc.bar_index, yloc=yloc.price,
+                          style=_isLong ? label.style_label_up : label.style_label_down,
+                          color=c, size=size.normal)
+    array.push(sigLabels, lb)
+    array.push(sigBars, bar_index)
+    array.push(sigIsLong, _isLong)
     if array.size(sigLabels) > maxLabels
         label rm = array.shift(sigLabels)
+        array.shift(sigBars)
+        array.shift(sigIsLong)
         label.delete(rm)
+
+updateSigLabels()=>
+    for i = 0 to array.size(sigLabels) - 1
+        label lb  = array.get(sigLabels, i)
+        int   idx = array.get(sigBars,   i)
+        bool  lg  = array.get(sigIsLong, i)
+        int   diff = bar_index - idx
+        float yNew = lg ? low[diff] * 0.98 : high[diff] * 1.02
+        label.set_xy(lb, idx, yNew)
 
 if longSignal
     createSigLabel(true)
 if shortSignal
     createSigLabel(false)
+updateSigLabels()
 
 // — tiny marker on key candle —
 dummyMarkLong  = longSignal  ? label.new(bar_index,high*1.02,"L",xloc.bar_index,yloc.price,style=label.style_label_up,size=size.tiny,color=color.green) : na
