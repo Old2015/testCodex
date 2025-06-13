@@ -166,9 +166,8 @@ if shortSignal
     createSigLabel(false)
 updateSigLabels()
 
-// — tiny marker on key candle —
-dummyMarkLong  = longSignal  ? label.new(bar_index,high*1.02,"L",xloc.bar_index,yloc.price,style=label.style_label_up,size=size.tiny,color=color.green) : na
-dummyMarkShort = shortSignal ? label.new(bar_index,high*1.02,"S",xloc.bar_index,yloc.price,style=label.style_label_down,size=size.tiny,color=color.red)  : na
+// tiny markers removed as they caused scrolling issues
+
 
 // === POSITION LINES (ATR-based) =============================================
 var bool  inPos  = false
