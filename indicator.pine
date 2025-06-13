@@ -136,9 +136,10 @@ var bool[]  sigIsLong   = array.new<bool>()
 createSigLabel(_isLong)=>
     string t  = _isLong ? "Long" : "Short"
     color  c  = _isLong ? color.green : color.red
-    float  y  = _isLong ? low  : high
-    loc = _isLong ? yloc.belowbar : yloc.abovebar
-    label  lb = label.new(bar_index, y, text=t, xloc=xloc.bar_index, yloc=loc,
+    yloc   loc = _isLong ? yloc.belowbar : yloc.abovebar
+    label  lb = label.new(bar_index, _isLong ? low : high,
+                          xloc=xloc.bar_index, yloc=loc,
+                          text=t,
                           style=_isLong ? label.style_label_up : label.style_label_down,
                           color=c, size=size.normal)
     array.push(sigLabels, lb)
@@ -158,8 +159,8 @@ updateSigLabels()=>
             int   idx = array.get(sigBars,   i)
             bool  lg  = array.get(sigIsLong, i)
             int   diff = bar_index - idx
-            float yNew = lg ? low[diff] : high[diff]
-            label.set_xy(lb, idx, yNew)
+            float y    = lg ? low[diff] : high[diff]
+            label.set_xy(lb, idx, y)
 
 if longSignal
     createSigLabel(true)
