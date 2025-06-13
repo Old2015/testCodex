@@ -136,9 +136,9 @@ var bool[]  sigIsLong   = array.new<bool>()
 createSigLabel(_isLong)=>
     string t  = _isLong ? "Long" : "Short"
     color  c  = _isLong ? color.green : color.red
-    yloc   loc = _isLong ? yloc.belowbar : yloc.abovebar
     label  lb = label.new(bar_index, _isLong ? low : high,
-                          xloc=xloc.bar_index, yloc=loc,
+                          xloc=xloc.bar_index,
+                          yloc=_isLong ? yloc.belowbar : yloc.abovebar,
                           text=t,
                           style=_isLong ? label.style_label_up : label.style_label_down,
                           color=c, size=size.normal)
