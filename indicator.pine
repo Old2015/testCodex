@@ -1,4 +1,4 @@
-//@version=5
+//@version=6
 // =============================================================================
 //  BTC-2  |  MTF Signals + Regime Detector (Trend / Range) + Auto-SL/TP lines
 //  © 2025  —  пример «индикатора-помощника», НЕ стратегия (нет `strategy.*`)
@@ -137,7 +137,7 @@ createSigLabel(_isLong)=>
     string t  = _isLong ? "Long" : "Short"
     color  c  = _isLong ? color.green : color.red
     float  y  = _isLong ? low  : high
-    yloc   loc = _isLong ? yloc.belowbar : yloc.abovebar
+    loc = _isLong ? yloc.belowbar : yloc.abovebar
     label  lb = label.new(bar_index, y, text=t, xloc=xloc.bar_index, yloc=loc,
                           style=_isLong ? label.style_label_up : label.style_label_down,
                           color=c, size=size.normal)
