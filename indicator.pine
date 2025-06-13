@@ -1,0 +1,200 @@
+//@version=6
+// =============================================================================
+//  BTC-2  |  MTF Signals + Regime Detector (Trend / Range) + Auto-SL/TP lines
+//  © 2025  —  пример «индикатора-помощника», НЕ стратегия (нет `strategy.*`)
+// =============================================================================
+indicator(title="BTC2 MTF Signals - Regime-Aware", shorttitle="BTC2_RA", overlay=true)
+
+// === INPUTS =================================================================
+tfSignal      = input.string("15",      "Рабочий ТФ для сигналов")      // 15-мин
+tfHTF         = input.string("240",     "HTF для импульса (MACD / RSI)")
+emaLenDaily   = input.int(200,          "EMA (Daily)")
+chopLen       = input.int(14,           "Choppiness length")
+
+// — детектор режима —
+adxLen        = input.int(14,           "ADX length (HTF)")
+adxTrendThr   = input.float(20, "ADX ≥  → Trend")
+bbWidthTrend  = input.float(0.05,"BB width ≥ → Trend", step=0.005)
+
+// — порог Chop для двух режимов —
+chopThrTrend  = input.float(48,"Chop<Trend (Trend)",  step=1)
+chopThrRange  = input.float(38,"Chop<Trend (Range)",  step=1)
+
+// — Bollinger 'safe zone' —
+bbLen         = input.int(20,  "BB period (signal-TF)")
+bbDev         = input.float(2, "BB σ")
+
+// — 'мягкое' голосование —
+needVotes     = input.int(3,   "Min votes (0-4) to trigger")
+
+// — ATR-зависимый SL/TP —
+atrLen        = input.int(14,           "ATR length (signal-TF)")
+slATRmult     = input.float(1.0, "SL = ATR ×", step=0.1)
+tpATRmult     = input.float(3.0, "TP = ATR ×", step=0.1)
+
+// — графика —
+maxLabels     = input.int(15, "Сколько прошлых меток держать (Long/Short)", minval=1, maxval=30)
+
+// === COMMON FUNCTIONS ========================================================
+f_choppiness(_len)=>tr=ta.atr(1),sa=ta.sma(tr,_len)*_len,hh=ta.highest(high,_len),ll=ta.lowest(low,_len),100*math.log10(sa/(hh-ll))/math.log10(_len)
+f_isBullPinBar(_o,_h,_l,_c)=>bs=math.abs(_c-_o),lw=(_c>_o? _o-_l : _c-_l),(lw>bs*2)and(_c>_o)
+f_isBearPinBar(_o,_h,_l,_c)=>bs=math.abs(_o-_c),uw=(_o>_c? _h-_o : _h-_c),(uw>bs*2)and(_c<_o)
+
+// === HTF  &  D1 DATA ========================================================
+dailyEMA  = request.security(syminfo.tickerid,"D",   ta.ema(close,emaLenDaily))
+chopDaily = request.security(syminfo.tickerid,"D",   f_choppiness(chopLen))
+[macdHTF,macdSigHTF,_] = request.security(syminfo.tickerid,tfHTF, ta.macd(close,12,26,9))
+rsiHTF    = request.security(syminfo.tickerid,tfHTF, ta.rsi(close,14))
+[diPlus, diMinus, adxHTF] = request.security(syminfo.tickerid,tfHTF, ta.dmi(high, low, close, adxLen))
+// regime detector on HTF:  Bollinger width on same HTF
+[bbMidHTF,bbUpperHTF,bbLowerHTF] = request.security(syminfo.tickerid,tfHTF, ta.bb(close,bbLen,bbDev))
+bbWidthHTF = (bbUpperHTF - bbLowerHTF) / close
+
+bool trendMode = (adxHTF >= adxTrendThr) or (bbWidthHTF >= bbWidthTrend)
+
+// === SIGNAL-TF DATA =========================================================
+openTF   = request.security(syminfo.tickerid,tfSignal, open)
+highTF   = request.security(syminfo.tickerid,tfSignal, high)
+lowTF    = request.security(syminfo.tickerid,tfSignal, low)
+closeTF  = request.security(syminfo.tickerid,tfSignal, close)
+volumeTF = request.security(syminfo.tickerid,tfSignal, volume)
+
+// bollinger on signal tf
+[bbMid,bbUpper,bbLower] = request.security(syminfo.tickerid,tfSignal, ta.bb(close,bbLen,bbDev))
+bandWidth = (bbUpper - bbLower)/close
+
+// volume spike & OBV
+volLen = input.int(20,"Vol MA len")
+volSpikeFactor = input.float(1.5,"Vol spike factor",step=0.1)
+volMA = request.security(syminfo.tickerid,tfSignal, ta.sma(volume,volLen))
+volSpike = volumeTF > volMA * volSpikeFactor
+obvRaw = ta.cum(math.sign(ta.change(close))*volume)
+obv = ta.ema(obvRaw,10)
+obvGrowing = obv > obv[1]
+
+// ATR on signal tf
+atrTF = request.security(syminfo.tickerid,tfSignal, ta.atr(atrLen))
+
+// === CANDLE PATTERNS ON signal-TF ===========================================
+usePinBar      = input.bool(true,"Use PinBar?")
+useEngulf      = input.bool(true,"Use Engulf?")
+
+bullEngulf = useEngulf and (closeTF[1] < openTF[1]) and (closeTF > openTF)   and (closeTF >= openTF[1]) and (openTF <= closeTF[1])
+bearEngulf = useEngulf and (closeTF[1] > openTF[1]) and (closeTF < openTF)   and (closeTF <= openTF[1]) and (openTF >= closeTF[1])
+
+bullPin   = usePinBar and f_isBullPinBar(openTF,highTF,lowTF,closeTF)
+bearPin   = usePinBar and f_isBearPinBar(openTF,highTF,lowTF,closeTF)
+
+bullPattern = bullEngulf or bullPin
+bearPattern = bearEngulf or bearPin
+
+// === FLEX FILTERS (Trend vs Range presets) ==================================
+float chopThr = trendMode ? chopThrTrend : chopThrRange
+
+bullTrend  = (close > dailyEMA)  and (chopDaily < chopThr)
+bearTrend  = (close < dailyEMA)  and (chopDaily < chopThr)
+
+// Bollinger safe-zone logic depends on regime
+bool safeBBTrend = (close > bbLower*1.005) and (bandWidth > bbWidthTrend)
+bool safeBBRange = (close < bbUpper*0.99)  and (close > bbLower*1.01)
+bool safeBBzone  = trendMode ? safeBBTrend : safeBBRange
+
+// MACD + RSI impulse (unchanged)
+bullImpulse = (macdHTF > macdSigHTF) and (rsiHTF > 60)
+bearImpulse = (macdHTF < macdSigHTF) and (rsiHTF < 40)
+
+// === SOFT VOTING ============================================================
+int votesLong  = 0
+votesLong += bullTrend      ? 1 : 0
+votesLong += bullImpulse    ? 1 : 0
+votesLong += safeBBzone     ? 1 : 0
+votesLong += obvGrowing     ? 1 : 0
+votesLong += volSpike       ? 1 : 0
+votesLong += bullPattern    ? 1 : 0
+
+int votesShort = 0
+votesShort += bearTrend     ? 1 : 0
+votesShort += bearImpulse   ? 1 : 0
+votesShort += safeBBzone    ? 1 : 0
+votesShort += (not obvGrowing) ? 1 : 0
+votesShort += volSpike      ? 1 : 0
+votesShort += bearPattern   ? 1 : 0
+
+longSignal  = votesLong  >= needVotes
+shortSignal = votesShort >= needVotes
+
+// === VISUALS ================================================================
+barcolor(longSignal  ? color.new(color.green,0)
+       : shortSignal ? color.new(color.red,0) : na)
+
+// — rolling buffer of labels —
+var label[] sigLabels = array.new<label>()
+createSigLabel(_isLong)=>
+    string t  = _isLong ? "Long" : "Short"
+    color  c  = _isLong ? color.green : color.red
+    float  y  = _isLong ? low*0.98 : high*1.02
+    label  lb = label.new(bar_index,y,text=t,xloc=xloc.bar_index,yloc=yloc.price,
+                          style=_isLong?label.style_label_up:label.style_label_down,
+                          color=c,size=size.normal)
+    array.push(sigLabels,lb)
+    if array.size(sigLabels) > maxLabels
+        label rm = array.shift(sigLabels)
+        label.delete(rm)
+
+if longSignal
+    createSigLabel(true)
+if shortSignal
+    createSigLabel(false)
+
+// — tiny marker on key candle —
+dummyMarkLong  = longSignal  ? label.new(bar_index,high*1.02,"L",xloc.bar_index,yloc.price,style=label.style_label_up,size=size.tiny,color=color.green) : na
+dummyMarkShort = shortSignal ? label.new(bar_index,high*1.02,"S",xloc.bar_index,yloc.price,style=label.style_label_down,size=size.tiny,color=color.red)  : na
+
+// === POSITION LINES (ATR-based) =============================================
+var bool  inPos  = false
+var bool  isLong = false
+var float entry  = na
+var float sl     = na
+var float tp     = na
+var line  lEntry = na
+var line  lSL    = na
+var line  lTP    = na
+
+if not inPos and longSignal
+    isLong := true
+    entry  := open     // open price of current bar
+    sl     := entry - atrTF * slATRmult
+    tp     := entry + atrTF * tpATRmult
+    lEntry := line.new(bar_index,entry,bar_index,entry,color=color.white,width=2)
+    lSL    := line.new(bar_index,sl,   bar_index,sl,   color=color.red,width=1)
+    lTP    := line.new(bar_index,tp,   bar_index,tp,   color=color.green,width=1)
+    inPos  := true
+
+if not inPos and shortSignal
+    isLong := false
+    entry  := open
+    sl     := entry + atrTF * slATRmult
+    tp     := entry - atrTF * tpATRmult
+    lEntry := line.new(bar_index,entry,bar_index,entry,color=color.white,width=2)
+    lSL    := line.new(bar_index,sl,   bar_index,sl,   color=color.red,width=1)
+    lTP    := line.new(bar_index,tp,   bar_index,tp,   color=color.green,width=1)
+    inPos  := true
+
+// update / exit
+if inPos
+    line.set_x2(lEntry,bar_index)
+    line.set_x2(lSL,   bar_index)
+    line.set_x2(lTP,   bar_index)
+
+    bool hitTP = ( isLong and high >= tp) or (not isLong and low <= tp)
+    bool hitSL = ( isLong and low  <= sl) or (not isLong and high>= sl)
+
+    if hitTP or hitSL
+        line.delete(lEntry)
+        line.delete(lSL)
+        line.delete(lTP)
+        inPos := false
+
+// === ALERTS =================================================================
+alertcondition(longSignal,"LongSignal","Long signal triggered!")
+alertcondition(shortSignal,"ShortSignal","Short signal triggered!")
