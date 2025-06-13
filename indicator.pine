@@ -45,7 +45,7 @@ dailyEMA  = request.security(syminfo.tickerid,"D",   ta.ema(close,emaLenDaily))
 chopDaily = request.security(syminfo.tickerid,"D",   f_choppiness(chopLen))
 [macdHTF,macdSigHTF,_] = request.security(syminfo.tickerid,tfHTF, ta.macd(close,12,26,9))
 rsiHTF    = request.security(syminfo.tickerid,tfHTF, ta.rsi(close,14))
-[diPlus, diMinus, adxHTF] = request.security(syminfo.tickerid,tfHTF, ta.dmi(high, low, close, adxLen))
+[diPlus, diMinus, adxHTF] = request.security(syminfo.tickerid,tfHTF, ta.dmi(adxLen, adxLen))
 // regime detector on HTF:  Bollinger width on same HTF
 [bbMidHTF,bbUpperHTF,bbLowerHTF] = request.security(syminfo.tickerid,tfHTF, ta.bb(close,bbLen,bbDev))
 bbWidthHTF = (bbUpperHTF - bbLowerHTF) / close
