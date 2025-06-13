@@ -129,18 +129,21 @@ barcolor(longSignal  ? color.new(color.green,0)
        : shortSignal ? color.new(color.red,0) : na)
 
 // — rolling buffer of labels —
-// keep last `maxLabels` labels and update their positions every bar
+// keep last `maxLabels` labels
 var label[] sigLabels = array.new<label>()
 
 createSigLabel(_isLong)=>
     string t  = _isLong ? "Long" : "Short"
     color  c  = _isLong ? color.green : color.red
-    label  lb = label.new(sigTime, _isLong ? lowTF : highTF,
-                          xloc=xloc.bar_time,
-                          yloc=_isLong ? yloc.belowbar : yloc.abovebar,
-                          text=t,
-                          style=_isLong ? label.style_label_up : label.style_label_down,
-                          color=c, size=size.normal)
+    // anchor to current bar so labels follow the chart when scrolling
+    label  lb = label.new(bar_index,
+                         _isLong ? low : high,
+                         xloc=xloc.bar_index,
+                         yloc=_isLong ? yloc.belowbar : yloc.abovebar,
+                         text=t,
+                         style=_isLong ? label.style_label_up : label.style_label_down,
+                         color=c,
+                         size=size.normal)
     array.push(sigLabels, lb)
     if array.size(sigLabels) > maxLabels
         label rm = array.shift(sigLabels)
