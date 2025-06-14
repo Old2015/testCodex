@@ -34,6 +34,7 @@ tpATRmult     = input.float(3.0, "TP = ATR ×", step=0.1)
 
 // — графика —
 maxLabels     = input.int(15, "Сколько прошлых меток держать (Long/Short)", minval=1, maxval=30)
+showLabelText = input.bool(true, "Show text on new labels?")
 
 // === COMMON FUNCTIONS ========================================================
 f_choppiness(_len)=>tr=ta.atr(1),sa=ta.sma(tr,_len)*_len,hh=ta.highest(high,_len),ll=ta.lowest(low,_len),100*math.log10(sa/(hh-ll))/math.log10(_len)
@@ -133,7 +134,7 @@ barcolor(longSignal  ? color.new(color.green,0)
 var label[] sigLabels = array.new<label>()
 
 createSigLabel(_isLong)=>
-    string t  = _isLong ? "Long" : "Short"
+    string t  = showLabelText ? (_isLong ? "Long" : "Short") : ""
     color  c  = _isLong ? color.green : color.red
     // anchor to current bar so labels follow the chart when scrolling
     label  lb = label.new(bar_index,
