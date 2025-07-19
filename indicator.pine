@@ -155,11 +155,14 @@ var color  barClr = na
 barClr := na
 
 // ───────── 7.  Расчёт qty по риску ───────────────────────────────────
+// Calculate position size the same way as in the strategy.
 calcQty(price, slPerc)=>
     riskUSD = equity * riskPerc / 100
     stopUSD = price * slPerc / 100
     qtyRisk = riskUSD / stopUSD
-    math.max(math.round(qtyRisk/qtyStep)*qtyStep, qtyStep)
+    qtyMax  = (equity * 0.95) / price
+    qty     = math.min(qtyRisk, qtyMax)
+    math.max(math.round(qty/qtyStep)*qtyStep, qtyStep)
 
 // ───────── 8.  Отмена просроченных лимиток ───────────────────────────
 if waiting and pos==0 and (bar_index - waitBar) >= entryTimeout
@@ -240,16 +243,26 @@ if pos != 0
     line.set_xy2(entryLine, bar_index, entryPrice)
     bool hitSL = (pos==1 and low <= slPrice) or (pos==-1 and high >= slPrice)
     bool hitTP = (pos==1 and high >= tpPrice) or (pos==-1 and low <= tpPrice)
+
     if hitSL or hitTP
-        exitPrice = hitSL ? slPrice : tpPrice
-        tag = hitSL ? "SL" : "TP"
-        clr = hitSL ? color.maroon : color.aqua
+        exitPrice = na
+        tag = ""
+        if hitSL and hitTP
+            exitPrice := tpPrice  // TP happens first according to TV bar model
+            tag := "TP"
+        else
+            exitPrice := hitSL ? slPrice : tpPrice
+            tag := hitSL ? "SL" : "TP"
+        clr = tag=="SL" ? color.maroon : color.aqua
         label.new(bar_index, high, tag+" "+str.tostring(exitPrice,format.price),
                   xloc=xloc.bar_index, yloc=yloc.price,
                   style=label.style_label_down, size=size.tiny,
                   color=clr, textcolor=color.white)
         barClr := clr
         lastExit := bar_index
+        // update equity to simulate strategy.equity
+        profit = pos==1 ? (exitPrice - entryPrice) * qty : (entryPrice - exitPrice) * qty
+        equity += profit
         pos := 0
         slLine := na
         tpLine := na
