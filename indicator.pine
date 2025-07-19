@@ -268,6 +268,36 @@ if pos != 0
         tpLine := na
         entryLine := na
 
+        // ► New signal on the same bar? Place a fresh limit ignoring cooldown
+        if not waiting and (longSignal or shortSignal)
+            waitLong := longSignal
+            waitPx   := open
+            waitBar  := bar_index
+            slPerc   = math.max(baseSL, coefA + coefB * atrNow)
+            qty      := calcQty(waitPx, slPerc)
+            tpMultCur = waitLong ? tpMultLong : tpMultShort
+            tpPerc    = slPerc * tpMultCur
+            slLimit   = waitLong ? waitPx*(1 - slPerc/100)
+                                 : waitPx*(1 + slPerc/100)
+            tpLimit   = waitLong ? waitPx*(1 + tpPerc/100)
+                                 : waitPx*(1 - tpPerc/100)
+            waiting := true
+
+            sideTxt = waitLong ? "LONG" : "SHORT"
+            alert("LIMIT-"+sideTxt+" | "+syminfo.ticker,
+                  " | L "+str.tostring(waitPx,format.price),
+                  alert.freq_once_per_bar)
+
+            clr = waitLong ? color.green : color.red
+            label.new(bar_index, waitLong?low:high,
+                      "Limit "+str.tostring(waitPx,format.price)+
+                      ", SL "+fmtPct(slPerc)+"% "+str.tostring(slLimit,format.price)+
+                      ", TP "+fmtPct(tpPerc)+"% "+str.tostring(tpLimit,format.price),
+                      xloc=xloc.bar_index, yloc=yloc.price,
+                      style=waitLong?label.style_label_up:label.style_label_down,
+                      size=size.tiny, color=clr, textcolor=color.white)
+            barClr := clr
+
 // ───────── 12.  Маркеры сигнала + barcolor ───────────────────────────
 if showMark and longSignal
     label.new(bar_index, high*1.01, "L",
