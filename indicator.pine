@@ -13,11 +13,11 @@ indicator(
 riskPerc        = input.float(1.0 , "Risk per trade (%)", step=0.1)
 atrLen          = input.int  (100 , "ATR length")
 coefA           = input.float(0.84 , "Dyn‑SL: intercept a", step=0.01)
-coefB           = input.float(0.0033,"Dyn‑SL: slope b"     , step=0.0001)
+coefB           = input.float(0.0035,"Dyn‑SL: slope b"     , step=0.0001)
 baseSL          = input.float(1.0 , "Base SL (%)", step=0.1)
 
 tpMultLong      = input.float(4.0 , "TP multiple LONG",  step=0.1)
-tpMultShort     = input.float(1.6 , "TP multiple SHORT", step=0.1)
+tpMultShort     = input.float(2.0 , "TP multiple SHORT", step=0.1)
 
 qtyStep         = input.float(0.001,"Lot step (BTC)", step=0.0001)
 
