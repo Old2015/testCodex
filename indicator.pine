@@ -194,7 +194,7 @@ if pos==0 and not waiting and coolReady and (longSignal or shortSignal)
           " | L "+str.tostring(waitPx,format.price),
           alert.freq_once_per_bar)
 
-    clr = waitLong ? color.green : color.red
+    clr := waitLong ? color.green : color.red
     label.new(bar_index, waitLong?low:high,
               "Limit "+str.tostring(waitPx,format.price)+
               ", SL "+fmtPct(slPerc)+"% "+str.tostring(slLimit,format.price)+
@@ -253,7 +253,7 @@ if pos != 0
         else
             exitPrice := hitSL ? slPrice : tpPrice
             tag := hitSL ? "SL" : "TP"
-        clr = tag=="SL" ? color.maroon : color.aqua
+        clr := tag=="SL" ? color.maroon : color.aqua
         label.new(bar_index, high, tag+" "+str.tostring(exitPrice,format.price),
                   xloc=xloc.bar_index, yloc=yloc.price,
                   style=label.style_label_down, size=size.tiny,
@@ -284,11 +284,11 @@ if pos != 0
             waiting := true
 
             sideTxt = waitLong ? "LONG" : "SHORT"
-            alert("LIMIT-"+sideTxt+" | "+syminfo.ticker,
-                  " | L "+str.tostring(waitPx,format.price),
-                  alert.freq_once_per_bar)
+    alert("LIMIT-"+sideTxt+" | "+syminfo.ticker+
+          " | L "+str.tostring(waitPx,format.price),
+          alert.freq_once_per_bar)
 
-            clr = waitLong ? color.green : color.red
+    clr := waitLong ? color.green : color.red
             label.new(bar_index, waitLong?low:high,
                       "Limit "+str.tostring(waitPx,format.price)+
                       ", SL "+fmtPct(slPerc)+"% "+str.tostring(slLimit,format.price)+
