@@ -11,8 +11,8 @@
 // ║        ENTRY‑SHORT | …  – позиция Short открылась                 ║
 // ╚════════════════════════════════════════════════════════════════════╝
 strategy(
-     title               = "BTC2 • Risk‑Sizing + Dyn‑SL (limit+cooldown)",
-     shorttitle          = "BTC2_RISK_DSL",
+     title               = "strat BTC2 • Risk‑Sizing + Dyn‑SL (limit+cooldown)",
+     shorttitle          = "strat BTC2_RISK_DSL",
      overlay             = true,
      default_qty_type    = strategy.fixed,
      default_qty_value   = 0,

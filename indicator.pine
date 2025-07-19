@@ -4,8 +4,8 @@
 // ║  Индикатор на основе стратегии                                   ║
 // ╚════════════════════════════════════════════════════════════════════╝
 indicator(
-     title               = "BTC2 • Risk‑Sizing + Dyn‑SL (limit+cooldown) [IND]",
-     shorttitle          = "BTC2_RISK_DSL_IND",
+     title               = "ind BTC2 • Risk‑Sizing + Dyn‑SL (limit+cooldown)",
+     shorttitle          = "ind BTC2_RISK_DSL_IND",
      overlay             = true,
      max_labels_count    = 500)
 
@@ -147,6 +147,8 @@ var int    pos      = 0
 var float  entryPrice = na
 var float  slPrice = na
 var float  tpPrice = na
+var line   slLine = na
+var line   tpLine = na
 
 var color  barClr = na
 barClr := na
@@ -175,6 +177,12 @@ if pos==0 and not waiting and coolReady and (longSignal or shortSignal)
     waitBar  := bar_index
     slPerc   = math.max(baseSL, coefA + coefB * atrNow)
     qty      = calcQty(waitPx, slPerc)
+    tpMultCur = waitLong ? tpMultLong : tpMultShort
+    tpPerc    = slPerc * tpMultCur
+    slLimit   = waitLong ? waitPx*(1 - slPerc/100)
+                         : waitPx*(1 + slPerc/100)
+    tpLimit   = waitLong ? waitPx*(1 + tpPerc/100)
+                         : waitPx*(1 - tpPerc/100)
     waiting := true
 
     sideTxt = waitLong ? "LONG" : "SHORT"
@@ -184,14 +192,16 @@ if pos==0 and not waiting and coolReady and (longSignal or shortSignal)
 
     clr = waitLong ? color.green : color.red
     label.new(bar_index, waitLong?low:high,
-              "L "+str.tostring(waitPx,format.price),
+              "Limit "+str.tostring(waitPx,format.price)+
+              ", SL "+fmtPct(slPerc)+"% "+str.tostring(slLimit,format.price)+
+              ", TP "+fmtPct(tpPerc)+"% "+str.tostring(tpLimit,format.price),
               xloc=xloc.bar_index, yloc=yloc.price,
               style=waitLong?label.style_label_up:label.style_label_down,
               size=size.tiny, color=clr, textcolor=color.white)
     barClr := clr
 
 // ───────── 10.  Проверка исполнения лимита ───────────────────────────
-if waiting and pos==0
+if waiting and pos==0 and bar_index > waitBar
     bool filled = (waitLong and low <= waitPx) or (not waitLong and high >= waitPx)
     if filled
         waiting := false
@@ -204,6 +214,10 @@ if waiting and pos==0
                              : entryPrice*(1 + slPerc/100)
         tpPrice := waitLong ? entryPrice*(1 + tpPerc/100)
                              : entryPrice*(1 - tpPerc/100)
+        slLine := line.new(bar_index, slPrice, bar_index, slPrice,
+                           color=color.red, style=line.style_dashed)
+        tpLine := line.new(bar_index, tpPrice, bar_index, tpPrice,
+                           color=color.aqua, style=line.style_dashed)
         alert("ENTRY-"+(waitLong?"LONG":"SHORT")+" | "+syminfo.ticker+
               " @ "+str.tostring(entryPrice,format.price),
               alert.freq_once_per_bar)
@@ -218,6 +232,8 @@ if waiting and pos==0
 
 // ───────── 11.  Проверка выхода ─────────────────────────────────────
 if pos != 0
+    line.set_xy2(slLine, bar_index, slPrice)
+    line.set_xy2(tpLine, bar_index, tpPrice)
     bool hitSL = (pos==1 and low <= slPrice) or (pos==-1 and high >= slPrice)
     bool hitTP = (pos==1 and high >= tpPrice) or (pos==-1 and low <= tpPrice)
     if hitSL or hitTP
@@ -231,6 +247,8 @@ if pos != 0
         barClr := clr
         lastExit := bar_index
         pos := 0
+        slLine := na
+        tpLine := na
 
 // ───────── 12.  Маркеры сигнала + barcolor ───────────────────────────
 if showMark and longSignal
