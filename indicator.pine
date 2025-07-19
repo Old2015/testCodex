@@ -4,10 +4,10 @@
 // ║  Индикатор на основе стратегии                                   ║
 // ╚════════════════════════════════════════════════════════════════════╝
 indicator(
-    title            = "ind BTC2 • Risk‑Sizing + Dyn‑SL (limit+cooldown)",
-    shorttitle       = "ind BTC2_RISK_DSL_IND",
-    overlay          = true,
-    max_labels_count = 500)
+     title            = "ind BTC2 • Risk‑Sizing + Dyn‑SL (limit+cooldown)",
+     shorttitle       = "ind BTC2_RISK_DSL_IND",
+     overlay          = true,
+     max_labels_count = 500)
 
 // ───────── 1.  Риск и стоп‑параметры ──────────────────────────────────
 riskPerc        = input.float(1.0 , "Risk per trade (%)", step=0.1)
@@ -87,9 +87,9 @@ dailyEMA = request.security(syminfo.tickerid,"D",  ta.ema(close,emaLenDaily))
 chopDaily= request.security(syminfo.tickerid,"D",  f_chop(chopLengthDaily))
 
 [macd4h, signal4h, _] = request.security(
-    syminfo.tickerid,
-    "240",
-    ta.macd(close, macdFastLen, macdSlowLen, macdSigLen))
+     syminfo.tickerid,
+     "240",
+     ta.macd(close, macdFastLen, macdSlowLen, macdSigLen))
 rsi4h = request.security(syminfo.tickerid,"240", ta.rsi(close,rsiLen4h))
 
 vol15m     = request.security(syminfo.tickerid,"15", volume)
@@ -123,20 +123,20 @@ safeBBzone     = close < bbUpper*0.99 and close > bbLower*1.01
 atrFilter      = (high-low) > atr15m * atrMult15m
 
 longSignal = ((not useDailyTrendChop) or bullTrendDaily) and
-    ((not useMACDRSI)        or bullImpulse4h)  and
-    ((not useVolSpike)       or volSpike)       and
-    ((not useOBV)            or obvGrowing)     and
-    ((not useBollinger)      or safeBBzone)     and
-    ((not useATR)            or atrFilter)      and
-    ((not useCandlePatterns) or bullPattern)
+     ((not useMACDRSI)        or bullImpulse4h)  and
+     ((not useVolSpike)       or volSpike)       and
+     ((not useOBV)            or obvGrowing)     and
+     ((not useBollinger)      or safeBBzone)     and
+     ((not useATR)            or atrFilter)      and
+     ((not useCandlePatterns) or bullPattern)
 
 shortSignal = ((not useDailyTrendChop) or bearTrendDaily) and
-    ((not useMACDRSI)        or bearImpulse4h)  and
-    ((not useVolSpike)       or volSpike)       and
-    ((not useOBV)            or not obvGrowing) and
-    ((not useBollinger)      or safeBBzone)     and
-    ((not useATR)            or atrFilter)      and
-    ((not useCandlePatterns) or bearPattern)
+     ((not useMACDRSI)        or bearImpulse4h)  and
+     ((not useVolSpike)       or volSpike)       and
+     ((not useOBV)            or not obvGrowing) and
+     ((not useBollinger)      or safeBBzone)     and
+     ((not useATR)            or atrFilter)      and
+     ((not useCandlePatterns) or bearPattern)
 
 // ───────── 6.  Состояние для симуляции ───────────────────────────────
 var bool   waiting  = false
@@ -156,7 +156,7 @@ var line   tpLine = na
 var color  barClr = na
 barClr := na
 
-// ───────── 7.  Расчёт qty по риску ───────────────────────────────────
+// ───────── 7.  Расчёт qty по риску ─────────────────────────────────── 
 // Calculate position size the same way as in the strategy.
 calcQty(price, slPerc)=>
     riskUSD = equity * riskPerc / 100
@@ -170,15 +170,15 @@ calcQty(price, slPerc)=>
 if waiting and pos==0 and (bar_index - waitBar) >= entryTimeout
     waiting := false
     label.new(
-        bar_index,
-        high,
-        "Cancel",
-        xloc = xloc.bar_index,
-        yloc = yloc.price,
-        style = label.style_label_center,
-        size = size.tiny,
-        color = color.orange,
-        textcolor = color.white)
+         bar_index,
+         high,
+         "Cancel",
+         xloc = xloc.bar_index,
+         yloc = yloc.price,
+         style = label.style_label_center,
+         size = size.tiny,
+         color = color.orange,
+         textcolor = color.white)
     barClr := color.orange
 
 // ───────── 9.  Создание новой лимит‑заявки ───────────────────────────
@@ -192,33 +192,32 @@ if pos==0 and not waiting and coolReady and (longSignal or shortSignal)
     tpMultCur = waitLong ? tpMultLong : tpMultShort
     tpPerc    = slPerc * tpMultCur
     slLimit   = waitLong ? waitPx*(1 - slPerc/100)
-        : waitPx*(1 + slPerc/100)
+         : waitPx*(1 + slPerc/100)
     tpLimit   = waitLong ? waitPx*(1 + tpPerc/100)
-        : waitPx*(1 - tpPerc/100)
+         : waitPx*(1 - tpPerc/100)
     waiting := true
 
     sideTxt = waitLong ? "LONG" : "SHORT"
     alert(
-        "LIMIT-" + sideTxt + " | " + syminfo.ticker,
-        " | L " + str.tostring(waitPx, format.price),
-        alert.freq_once_per_bar)
+         "LIMIT-" + sideTxt + " | " + syminfo.ticker + " | L " + str.tostring(waitPx, format.price),
+         alert.freq_once_per_bar)
 
-    clr := waitLong ? color.green : color.red
+    clr = waitLong ? color.green : color.red
     label.new(
-        bar_index,
-        waitLong ? low : high,
-        "Limit " + str.tostring(waitPx, format.price) +
-            ", SL " + fmtPct(slPerc) + "% " + str.tostring(slLimit, format.price) +
-            ", TP " + fmtPct(tpPerc) + "% " + str.tostring(tpLimit, format.price),
-        xloc = xloc.bar_index,
-        yloc = yloc.price,
-        style = waitLong ? label.style_label_up : label.style_label_down,
-        size = size.tiny,
-        color = clr,
-        textcolor = color.white)
+         bar_index,
+         waitLong ? low : high,
+         "Limit " + str.tostring(waitPx, format.price) +
+             ", SL " + fmtPct(slPerc) + "% " + str.tostring(slLimit, format.price) +
+             ", TP " + fmtPct(tpPerc) + "% " + str.tostring(tpLimit, format.price),
+         xloc = xloc.bar_index,
+         yloc = yloc.price,
+         style = waitLong ? label.style_label_up : label.style_label_down,
+         size = size.tiny,
+         color = clr,
+         textcolor = color.white)
     barClr := clr
 
-// ───────── 10.  Проверка исполнения лимита ───────────────────────────
+// ───────── 10.  Проверка исполнения лимита ─────────────────────────── 
 if waiting and pos==0 and bar_index > waitBar
     bool filled = (waitLong and low <= waitPx) or (not waitLong and high >= waitPx)
     if filled
@@ -229,31 +228,30 @@ if waiting and pos==0 and bar_index > waitBar
         tpMultCur = waitLong ? tpMultLong : tpMultShort
         tpPerc  = slPerc * tpMultCur
         slPrice := waitLong ? entryPrice * (1 - slPerc / 100)
-            : entryPrice * (1 + slPerc / 100)
+             : entryPrice * (1 + slPerc / 100)
         tpPrice := waitLong ? entryPrice * (1 + tpPerc / 100)
-            : entryPrice * (1 - tpPerc / 100)
+             : entryPrice * (1 - tpPerc / 100)
         slLine := line.new(bar_index, slPrice, bar_index, slPrice,
-            color = color.red, style = line.style_dashed)
+             color = color.red, style = line.style_dashed)
         tpLine := line.new(bar_index, tpPrice, bar_index, tpPrice,
-            color = color.aqua, style = line.style_dashed)
+             color = color.aqua, style = line.style_dashed)
         entryLine := line.new(bar_index, entryPrice, bar_index, entryPrice,
-            color = color.blue, style = line.style_dashed)
+             color = color.blue, style = line.style_dashed)
         alert(
-            "ENTRY-" + (waitLong ? "LONG" : "SHORT") + " | " + syminfo.ticker,
-            " @ " + str.tostring(entryPrice, format.price),
-            alert.freq_once_per_bar)
+             "ENTRY-" + (waitLong ? "LONG" : "SHORT") + " | " + syminfo.ticker + " @ " + str.tostring(entryPrice, format.price),
+             alert.freq_once_per_bar)
         label.new(
-            bar_index,
-            waitLong ? low : high,
-            "Entry " + str.tostring(entryPrice, format.price) +
-                ", SL " + fmtPct(slPerc) + "% " + str.tostring(slPrice, format.price) +
-                ", TP " + fmtPct(tpPerc) + "% " + str.tostring(tpPrice, format.price),
-            xloc = xloc.bar_index,
-            yloc = yloc.price,
-            style = waitLong ? label.style_label_up : label.style_label_down,
-            size = size.tiny,
-            color = color.lime,
-            textcolor = color.black)
+             bar_index,
+             waitLong ? low : high,
+             "Entry " + str.tostring(entryPrice, format.price) +
+                 ", SL " + fmtPct(slPerc) + "% " + str.tostring(slPrice, format.price) +
+                 ", TP " + fmtPct(tpPerc) + "% " + str.tostring(tpPrice, format.price),
+             xloc = xloc.bar_index,
+             yloc = yloc.price,
+             style = waitLong ? label.style_label_up : label.style_label_down,
+             size = size.tiny,
+             color = color.lime,
+             textcolor = color.black)
         barClr := color.lime
 
 // ───────── 11.  Проверка выхода ─────────────────────────────────────
@@ -273,20 +271,20 @@ if pos != 0
         else
             exitPrice := hitSL ? slPrice : tpPrice
             tag := hitSL ? "SL" : "TP"
-        clr := tag == "SL" ? color.maroon : color.aqua
+        clr = tag == "SL" ? color.maroon : color.aqua
         label.new(
-            bar_index,
-            high,
-            tag + " " + str.tostring(exitPrice, format.price),
-            xloc = xloc.bar_index,
-            yloc = yloc.price,
-            style = label.style_label_down,
-            size = size.tiny,
-            color = clr,
-            textcolor = color.white)
+             bar_index,
+             high,
+             tag + " " + str.tostring(exitPrice, format.price),
+             xloc = xloc.bar_index,
+             yloc = yloc.price,
+             style = label.style_label_down,
+             size = size.tiny,
+             color = clr,
+             textcolor = color.white)
         barClr := clr
         lastExit := bar_index
-        // update equity to simulate strategy.equity
+        // update equity to simulate strategy.equity 
         profit = pos==1 ? (exitPrice - entryPrice) * qty : (entryPrice - exitPrice) * qty
         equity += profit
         pos := 0
@@ -304,52 +302,51 @@ if pos != 0
             tpMultCur = waitLong ? tpMultLong : tpMultShort
             tpPerc    = slPerc * tpMultCur
             slLimit   = waitLong ? waitPx*(1 - slPerc/100)
-                : waitPx*(1 + slPerc/100)
+                 : waitPx*(1 + slPerc/100)
             tpLimit   = waitLong ? waitPx*(1 + tpPerc/100)
-                : waitPx*(1 - tpPerc/100)
+                 : waitPx*(1 - tpPerc/100)
             waiting := true
 
             sideTxt = waitLong ? "LONG" : "SHORT"
             alert(
-                "LIMIT-" + sideTxt + " | " + syminfo.ticker,
-                " | L " + str.tostring(waitPx, format.price),
-                alert.freq_once_per_bar)
+                 "LIMIT-" + sideTxt + " | " + syminfo.ticker + " | L " + str.tostring(waitPx, format.price),
+                 alert.freq_once_per_bar)
 
             clr := waitLong ? color.green : color.red
             label.new(
-                bar_index,
-                waitLong ? low : high,
-                "Limit " + str.tostring(waitPx, format.price) +
-                    ", SL " + fmtPct(slPerc) + "% " + str.tostring(slLimit, format.price) +
-                    ", TP " + fmtPct(tpPerc) + "% " + str.tostring(tpLimit, format.price),
-                xloc = xloc.bar_index,
-                yloc = yloc.price,
-                style = waitLong ? label.style_label_up : label.style_label_down,
-                size = size.tiny,
-                color = clr,
-                textcolor = color.white)
+                 bar_index,
+                 waitLong ? low : high,
+                 "Limit " + str.tostring(waitPx, format.price) +
+                     ", SL " + fmtPct(slPerc) + "% " + str.tostring(slLimit, format.price) +
+                     ", TP " + fmtPct(tpPerc) + "% " + str.tostring(tpLimit, format.price),
+                 xloc = xloc.bar_index,
+                 yloc = yloc.price,
+                 style = waitLong ? label.style_label_up : label.style_label_down,
+                 size = size.tiny,
+                 color = clr,
+                 textcolor = color.white)
             barClr := clr
 
 // ───────── 12.  Маркеры сигнала + barcolor ───────────────────────────
 if showMark and longSignal
     label.new(
-        bar_index,
-        high * 1.01,
-        "L",
-        xloc = xloc.bar_index,
-        yloc = yloc.price,
-        style = label.style_label_up,
-        size = size.tiny,
-        color = color.green)
+         bar_index,
+         high * 1.01,
+         "L",
+         xloc = xloc.bar_index,
+         yloc = yloc.price,
+         style = label.style_label_up,
+         size = size.tiny,
+         color = color.green)
 if showMark and shortSignal
     label.new(
-        bar_index,
-        high * 1.01,
-        "S",
-        xloc = xloc.bar_index,
-        yloc = yloc.price,
-        style = label.style_label_down,
-        size = size.tiny,
-        color = color.red)
+         bar_index,
+         high * 1.01,
+         "S",
+         xloc = xloc.bar_index,
+         yloc = yloc.price,
+         style = label.style_label_down,
+         size = size.tiny,
+         color = color.red)
 
 barcolor(colorBars ? barClr : na)

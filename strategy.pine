@@ -196,7 +196,7 @@ if strategy.position_size==0 and not waiting and coolReady and (longSignal or sh
           " | L "+str.tostring(waitPx,format.price),
           alert.freq_once_per_bar)
 
-    clr := waitLong ? color.green : color.red
+    clr = waitLong ? color.green : color.red
     label.new(bar_index, waitLong?low:high,
               "L "+str.tostring(waitPx,format.price),
               xloc=xloc.bar_index, yloc=yloc.price,
@@ -246,7 +246,7 @@ if strategy.position_size==0 and prevPos!=0
     hitSL = (wasLong and exitP < entryP) or (not wasLong and exitP > entryP)
 
     tag = hitSL?"SL":"TP"
-    clr := hitSL?color.maroon:color.aqua
+    clr = hitSL?color.maroon:color.aqua
     label.new(bar_index, high, tag+" "+str.tostring(exitP,format.price),
               xloc=xloc.bar_index, yloc=yloc.price,
               style=label.style_label_down, size=size.tiny,
