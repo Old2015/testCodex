@@ -161,8 +161,8 @@ calcQty(price, slPerc)=>
     stopUSD = price * slPerc / 100
     qtyRisk = riskUSD / stopUSD
     qtyMax  = (equity * 0.95) / price
-    qty     = math.min(qtyRisk, qtyMax)
-    math.max(math.round(qty/qtyStep)*qtyStep, qtyStep)
+    qtyCalc = math.min(qtyRisk, qtyMax)
+    math.max(math.round(qtyCalc/qtyStep)*qtyStep, qtyStep)
 
 // ───────── 8.  Отмена просроченных лимиток ───────────────────────────
 if waiting and pos==0 and (bar_index - waitBar) >= entryTimeout
@@ -180,7 +180,7 @@ if pos==0 and not waiting and coolReady and (longSignal or shortSignal)
     waitPx   := open
     waitBar  := bar_index
     slPerc   = math.max(baseSL, coefA + coefB * atrNow)
-    qty      = calcQty(waitPx, slPerc)
+    qty      := calcQty(waitPx, slPerc)
     tpMultCur = waitLong ? tpMultLong : tpMultShort
     tpPerc    = slPerc * tpMultCur
     slLimit   = waitLong ? waitPx*(1 - slPerc/100)
@@ -245,8 +245,8 @@ if pos != 0
     bool hitTP = (pos==1 and high >= tpPrice) or (pos==-1 and low <= tpPrice)
 
     if hitSL or hitTP
-        exitPrice = na
-        tag = ""
+        float exitPrice = na
+        string tag = ""
         if hitSL and hitTP
             exitPrice := tpPrice  // TP happens first according to TV bar model
             tag := "TP"
