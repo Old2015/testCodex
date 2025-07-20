@@ -46,6 +46,7 @@ cooldownBars    = input.int (10 , "Cooldown bars after exit",  1)
 // showMark  – отображать ли буквы "L"/"S" над барами с сигналом.
 colorBars       = input.bool(true , "Color bars?")
 showMark        = input.bool(true , "Show L/S markers?")
+partXR          = input.float(1.0 , "Alert at partial profit xR", step=0.1)
 
 // Начальная величина капитала, необходимая для расчёта размера позиции
 // при имитации стратегии в индикаторе.
@@ -205,6 +206,8 @@ var float  tpPrice = na      // текущий тейк‑профит
 var line   entryLine = na
 var line   slLine = na
 var line   tpLine = na
+var bool   partialHit = false  // достигнут ли xR в текущей сделке
+var float  partialLvl = na     // цена уровня xR
 
 // Цвет, которым будет подсвечена свеча текущего бара
 var color  barClr = na
@@ -299,6 +302,11 @@ if waiting and pos==0 and bar_index > waitBar
              color = color.aqua, style = line.style_dashed)
         entryLine := line.new(bar_index, entryPrice, bar_index, entryPrice,
              color = color.blue, style = line.style_dashed)
+        // Расчёт уровня частичной прибыли
+        riskAbs = entryPrice * (slPerc / 100)
+        partialLvl := partXR > 0 ? (pos==1 ? entryPrice + riskAbs * partXR
+                                      : entryPrice - riskAbs * partXR) : na
+        partialHit := false
         // Алерт о фактическом входе в позицию
         alert(
              "ENTRY-" + (waitLong ? "LONG" : "SHORT") + " | " + syminfo.ticker + " @ " + str.tostring(entryPrice, format.price),
@@ -323,6 +331,25 @@ if pos != 0
     line.set_xy2(slLine, bar_index, slPrice)
     line.set_xy2(tpLine, bar_index, tpPrice)
     line.set_xy2(entryLine, bar_index, entryPrice)
+    // Частичная фиксация прибыли при достижении xR
+    if not partialHit and partXR > 0
+        bool touch = (pos==1 and high >= partialLvl) or (pos==-1 and low <= partialLvl)
+        if touch
+            alert(
+                 "PARTIAL-" + str.tostring(partXR) + "R | " + syminfo.ticker + " @ " + str.tostring(partialLvl, format.price),
+                 alert.freq_once_per_bar)
+            label.new(
+                 bar_index,
+                 high,
+                 str.tostring(partXR) + "R",
+                 xloc = xloc.bar_index,
+                 yloc = yloc.price,
+                 style = label.style_label_down,
+                 size = size.tiny,
+                 color = color.new(color.lime, 0),
+                 textcolor = color.black)
+            barClr := color.new(color.lime, 80)
+            partialHit := true
     bool hitSL = (pos==1 and low <= slPrice) or (pos==-1 and high >= slPrice)
     bool hitTP = (pos==1 and high >= tpPrice) or (pos==-1 and low <= tpPrice)
 
@@ -352,6 +379,8 @@ if pos != 0
         profit = pos==1 ? (exitPrice - entryPrice) * qty : (entryPrice - exitPrice) * qty
         equity += profit
         pos := 0
+        partialHit := false
+        partialLvl := na
         slLine := na
         tpLine := na
         entryLine := na
