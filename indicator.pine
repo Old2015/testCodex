@@ -313,9 +313,9 @@ if waiting and pos==0 and bar_index > waitBar
              yloc = yloc.price,
              style = waitLong ? label.style_label_up : label.style_label_down,
              size = size.tiny,
-             color = color.lime,
-             textcolor = color.black)
-        barClr := color.lime
+             color = color.blue,
+             textcolor = color.white)
+        barClr := color.blue
 
 // ───────── 11.  Проверка выхода ─────────────────────────────────────
 // Когда позиция открыта, проверяем достижение SL или TP

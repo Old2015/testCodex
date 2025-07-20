@@ -267,8 +267,8 @@ if strategy.position_size!=0 and prevPos==0
          ", TP "+fmtPct(tpPerc)+"% "+str.tostring(tpPrice,format.price),
          xloc=xloc.bar_index, yloc=yloc.price,
          style=longPos?label.style_label_up:label.style_label_down,
-         size=size.tiny, color=color.lime, textcolor=color.black)
-    barClr := color.lime
+         size=size.tiny, color=color.blue, textcolor=color.white)
+    barClr := color.blue
 
 // ───────── 11.  Выход и cooldown ─────────────────────────────────────
 // После закрытия позиции фиксируем результат и начинаем отсчёт cooldown
