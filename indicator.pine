@@ -50,7 +50,7 @@ partXR          = input.float(1.0 , "Alert at partial profit xR", step=0.1)
 
 // Начальная величина капитала, необходимая для расчёта размера позиции
 // при имитации стратегии в индикаторе.
-initEquity      = input.float(30000, "Initial equity")
+initEquity      = input.float(50000, "Initial equity")
 var float equity = initEquity
 
 // ───────── 2.  Фильтры и параметры индикаторов (как в стратегии) ───

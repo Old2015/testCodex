@@ -15,7 +15,7 @@ strategy(
      overlay             = true,
      default_qty_type    = strategy.fixed,
      default_qty_value   = 0,
-     initial_capital     = 30000,
+     initial_capital     = 50000,
      currency            = currency.USDT,
      process_orders_on_close = true,
      max_labels_count    = 500,
