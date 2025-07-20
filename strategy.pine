@@ -39,17 +39,17 @@ qtyStep         = input.float(0.001,"Lot step (BTC)", step=0.0001)
 // Через сколько баров отменять неисполненный лимитный ордер
 entryTimeout    = input.int (1000 , "Cancel limit after N bars", 1)
 // Сколько баров ждать после выхода перед новой заявкой
-cooldownBars    = input.int (10 , "Cooldown bars after exit",  1)
+cooldownBars    = input.int (1 , "Cooldown bars after exit",  1)
 
 // Дополнительные визуальные эффекты
 colorBars       = input.bool(true , "Color bars?")
 showMark        = input.bool(true , "Show L/S markers?")
 
 // Настройки частичной фиксации прибыли
-takePartial     = input.bool(true , "Частично фиксируем прибыль ?")
+takePartial     = input.bool(false , "Частично фиксируем прибыль ?")
 partialXR       = input.float(1.0 , "Фиксируем прибыль, на xR", step=0.1)
 partialPercent  = input.float(50.0, "Фиксируем прибыль в процентах", step=1)
-moveToBE        = input.bool(true , "После частичной фиксации переводим в б/у?")
+moveToBE        = input.bool(false , "После частичной фиксации переводим в б/у?")
 
 // ───────── 2.  Фильтры и параметры индикаторов (как в индикаторе) ───
 // Настройки фильтров, полностью совпадающих с индикатором

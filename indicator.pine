@@ -40,13 +40,13 @@ qtyStep         = input.float(0.001,"Lot step (BTC)", step=0.0001)
 // лимитная заявка. cooldownBars – пауза после выхода из позиции,
 // во время которой новые заявки не ставятся.
 entryTimeout    = input.int (1000 , "Cancel limit after N bars", 1)
-cooldownBars    = input.int (10 , "Cooldown bars after exit",  1)
+cooldownBars    = input.int (1 , "Cooldown bars after exit",  1)
 
 // colorBars – раскрашивать свечи в зависимости от событий.
 // showMark  – отображать ли буквы "L"/"S" над барами с сигналом.
 colorBars       = input.bool(true , "Color bars?")
 showMark        = input.bool(true , "Show L/S markers?")
-partXR          = input.float(1.0 , "Alert at partial profit xR", step=0.1)
+partXR          = input.float(1.5 , "Alert at partial profit xR", step=0.1)
 
 // Начальная величина капитала, необходимая для расчёта размера позиции
 // при имитации стратегии в индикаторе.
