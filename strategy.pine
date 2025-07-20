@@ -24,7 +24,17 @@ strategy(
 // ───────── 1.  Риск и стоп‑параметры ──────────────────────────────────
 // Базовые настройки управления капиталом и стоп‑приказами
 riskPerc        = input.float(1.0 , "Risk per trade (%)", step=0.1)
-atrLen          = input.int  (100 , "ATR length")
+// === Inputs ===
+atrLen      = input.int(14,  "ATR Length")
+adxLen      = input.int(14,  "ADX Length")
+atrMult     = input.float(1.2, "ATR Multiplier", step = 0.1)
+adxLow      = input.int(20,  "ADX low  (<=)")
+adxMid      = input.int(30,  "ADX mid  (<=)")
+adxHigh     = input.int(40,  "ADX high (>)")
+adxFacLo    = input.float(1.5, "Factor if ADX ≤ adxLow",  step = 0.1)
+adxFacMid   = input.float(1.2, "Factor if adxLow<ADX≤adxMid", step = 0.1)
+adxFacNorm  = input.float(1.0, "Factor if adxMid<ADX≤adxHigh", step = 0.1)
+adxFacHi    = input.float(0.8, "Factor if ADX  > adxHigh", step = 0.1)
 coefA           = input.float(0.84 , "Dyn‑SL: intercept a", step=0.01)
 coefB           = input.float(0.0035,"Dyn‑SL: slope b"     , step=0.0001)
 baseSL          = input.float(1.0 , "Base SL (%)", step=0.1)
@@ -112,7 +122,22 @@ fmtPct(x)=> str.tostring(math.round(x*100)/100, "#.##")
 
 // ───────── 4.  HTF‑данные ────────────────────────────────────────────
 // Получение данных со старших таймфреймов, необходимых для фильтров
-atrNow   = ta.atr(atrLen)
+atrVal = ta.atr(atrLen)
+adxVal = ta.adx(adxLen)
+
+adxFactor = adxVal <= adxLow  ? adxFacLo   :
+            adxVal <= adxMid  ? adxFacMid  :
+            adxVal <= adxHigh ? adxFacNorm :
+                                adxFacHi
+
+stopOffset = atrVal * atrMult * adxFactor
+longStop   = strategy.position_avg_price - stopOffset
+shortStop  = strategy.position_avg_price + stopOffset
+
+if strategy.position_size > 0
+    strategy.exit("Long SL", from_entry=orderId, stop=longStop)
+if strategy.position_size < 0
+    strategy.exit("Short SL", from_entry=orderId, stop=shortStop)
 
 dailyEMA = request.security(syminfo.tickerid,"D",  ta.ema(close,emaLenDaily))
 chopDaily= request.security(syminfo.tickerid,"D",  f_chop(chopLengthDaily))
@@ -228,7 +253,7 @@ if strategy.position_size==0 and not waiting and coolReady and (longSignal or sh
     waitLong := longSignal
     waitPx   := open
     waitBar  := bar_index
-    slPerc   = math.max(baseSL, coefA + coefB * atrNow)
+    slPerc   = stopOffset / waitPx * 100
     orderId  := (waitLong ? "LIML_" : "LIMS_") + str.tostring(bar_index)
     qty      = calcQty(waitPx, slPerc)
 
@@ -262,7 +287,8 @@ if strategy.position_size!=0 and prevPos==0
           alert.freq_once_per_bar)
 
     entryPrice = strategy.position_avg_price
-    slPerc     = math.max(baseSL, coefA + coefB * atrNow)
+    stopOffset = atrVal * atrMult * adxFactor
+    slPerc     = stopOffset / entryPrice * 100
 
     // Сохраняем параметры сделки для дальнейшего отслеживания
     entryP      := entryPrice
@@ -274,10 +300,10 @@ if strategy.position_size!=0 and prevPos==0
                          : entryPrice*(1 - tpPerc/100)
     tpPriceVar := tpPrice
     partialDone := false
-    slPrice    = longPos ? entryPrice*(1 - slPerc/100)
-                         : entryPrice*(1 + slPerc/100)
+    slPrice    = longPos ? entryPrice - stopOffset
+                         : entryPrice + stopOffset
 
-    strategy.exit("EXIT", from_entry=orderId, stop=slPrice, limit=tpPrice)
+    //strategy.exit("EXIT", from_entry=orderId, stop=slPrice, limit=tpPrice)
 
     label.new(bar_index, longPos?low:high,
          "Entry "+str.tostring(entryPrice,format.price)+
@@ -305,8 +331,8 @@ if takePartial and not partialDone and strategy.position_size!=0
         strategy.close(orderId, qty_percent=partialPercent)
         partialDone := true
         if moveToBE
-            strategy.exit("EXIT", from_entry=orderId,
-                         stop=entryP, limit=tpPriceVar)
+            //strategy.exit("EXIT", from_entry=orderId,
+            //             stop=entryP, limit=tpPriceVar)
 
 // ───────── 11.  Выход и cooldown ─────────────────────────────────────
 // После закрытия позиции фиксируем результат и начинаем отсчёт cooldown
