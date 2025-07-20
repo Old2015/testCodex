@@ -1,14 +1,13 @@
 //@version=6
 // ╔════════════════════════════════════════════════════════════════════╗
 // ║  BTC‑2 • Risk‑Sizing + Dynamic‑SL • limit‑entry + cooldown        ║
-// ║  ▸ лимит = open сигнального бара; заявка живёт N баров            ║
-// ║  ▸ SL% = max(BaseSL , a + b·ATR);  TP% = SL% × tpMult(long/short) ║
-// ║  ▸ qty рассчитывается от риска + проверка маржи                   ║
-// ║  ▸ alert():                                                       ║
-// ║        LIMIT‑LONG  | …  – лимитка Long выставлена                 ║
-// ║        LIMIT‑SHORT | …  – лимитка Short выставлена                ║
-// ║        ENTRY‑LONG  | …  – позиция Long открылась                  ║
-// ║        ENTRY‑SHORT | …  – позиция Short открылась                 ║
+// ║                                                                  ║
+// ║  Это полноценная торговая стратегия. Она выставляет лимитные      ║
+// ║  ордера по цене открытия сигнального бара и сопровождает позицию  ║
+// ║  динамическим стопом и тейк‑профитом. Размер позиции вычисляется   ║
+// ║  исходя из заданного процента риска от капитала.                   ║
+// ║                                                                  ║
+// ║  Алерты информируют о постановке заявки и о входе в позицию.      ║
 // ╚════════════════════════════════════════════════════════════════════╝
 strategy(
      title               = "strat BTC2 • Risk‑Sizing + Dyn‑SL (limit+cooldown)",
@@ -22,29 +21,37 @@ strategy(
      max_labels_count    = 500,
      calc_on_every_tick  = false)
 
-// ───────── 1.  Риск и стоп‑параметры ────────────────────────────────── 
+// ───────── 1.  Риск и стоп‑параметры ──────────────────────────────────
+// Базовые настройки управления капиталом и стоп‑приказами
 riskPerc        = input.float(1.0 , "Risk per trade (%)", step=0.1)
 atrLen          = input.int  (100 , "ATR length")
 coefA           = input.float(0.84 , "Dyn‑SL: intercept a", step=0.01)
 coefB           = input.float(0.0035,"Dyn‑SL: slope b"     , step=0.0001)
 baseSL          = input.float(1.0 , "Base SL (%)", step=0.1)
 
+// Множители тейк‑профита для лонга и шорта
 tpMultLong      = input.float(4.0 , "TP multiple LONG",  step=0.1)
 tpMultShort     = input.float(2.0 , "TP multiple SHORT", step=0.1)
 
+// Минимальный шаг контракта
 qtyStep         = input.float(0.001,"Lot step (BTC)", step=0.0001)
 
+// Через сколько баров отменять неисполненный лимитный ордер
 entryTimeout    = input.int (1000 , "Cancel limit after N bars", 1)
+// Сколько баров ждать после выхода перед новой заявкой
 cooldownBars    = input.int (10 , "Cooldown bars after exit",  1)
 
+// Дополнительные визуальные эффекты
 colorBars       = input.bool(true , "Color bars?")
 showMark        = input.bool(true , "Show L/S markers?")
 
 // ───────── 2.  Фильтры и параметры индикаторов (как в индикаторе) ───
-emaLenDaily       = input.int  (200, "EMA (Daily)")
-chopLengthDaily   = input.int  (14 , "Chop len (Daily)")
-chopThreshTrend   = input.float(38 , "Chop < → Trend", step=0.5)
+// Настройки фильтров, полностью совпадающих с индикатором
+emaLenDaily       = input.int  (200, "EMA (Daily)")      // период дневной EMA
+chopLengthDaily   = input.int  (14 , "Chop len (Daily)")  // окно индекса choppiness
+chopThreshTrend   = input.float(38 , "Chop < → Trend", step=0.5) // порог тренда
 
+// Параметры индикаторов MACD и RSI на 4H
 macdFastLen       = input.int(12, "MACD fast (4H)")
 macdSlowLen       = input.int(26, "MACD slow (4H)")
 macdSigLen        = input.int( 9, "MACD signal (4H)")
@@ -52,19 +59,23 @@ rsiLen4h          = input.int(14, "RSI len (4H)")
 rsiOB             = input.int(60, "RSI overbought")
 rsiOS             = input.int(40, "RSI oversold")
 
+// Параметры объёмных индикаторов на 15‑минутках
 volLen15m         = input.int (20, "Volume MA len (15m)")
 volSpikeFactor    = input.float(1.5, "Volume spike ×", step=0.1)
 obvLen            = input.int (10 , "OBV EMA len (15m)")
 
+// Полосы Боллинджера и ATR
 bbPeriod          = input.int (20 , "BB period (15m)")
 bbDev             = input.float(2.0,"BB deviation", step=0.1)
 atrPeriod15m      = input.int (14 , "ATR len (15m)")
 atrMult15m        = input.float(1.5,"ATR filter ×", step=0.1)
 
+// Включение свечных моделей
 useBullEngulf     = input.bool(true,  "Pattern: Bull Engulf")
 useBearEngulf     = input.bool(true,  "Pattern: Bear Engulf")
 usePinBar         = input.bool(false,  "Pattern: Pin Bar")
 
+// Флаги включения различных фильтров
 useDailyTrendChop = input.bool(false,"Filter: Daily trend+chop")
 useMACDRSI        = input.bool(true ,"Filter: MACD+RSI (4H)")
 useVolSpike       = input.bool(true ,"Filter: Volume spike")
@@ -74,36 +85,44 @@ useATR            = input.bool(true ,"Filter: ATR range")
 useCandlePatterns = input.bool(true ,"Filter: Candle patterns")
 
 // ───────── 3.  helper‑функции ────────────────────────────────────────
+// Вспомогательные функции, используемые в фильтрах
 f_chop(_l)=>
     100*math.log10(ta.sma(ta.atr(1),_l)*_l/(ta.highest(high,_l)-ta.lowest(low,_l)))/math.log10(_l)
 
+// Бычий пин-бар
 f_bPin(_o,_h,_l,_c)=>
     body=math.abs(_c-_o)
     wick=_c>_o ? _o-_l : _c-_l
     wick>body*2 and _c>_o
 
+// Медвежий пин-бар
 f_sPin(_o,_h,_l,_c)=>
     body=math.abs(_o-_c)
     wick=_o>_c ? _h-_o : _h-_c
     wick>body*2 and _c<_o
 
+// Форматирование числа в процентах
 fmtPct(x)=> str.tostring(math.round(x*100)/100, "#.##")
 
 // ───────── 4.  HTF‑данные ────────────────────────────────────────────
+// Получение данных со старших таймфреймов, необходимых для фильтров
 atrNow   = ta.atr(atrLen)
 
 dailyEMA = request.security(syminfo.tickerid,"D",  ta.ema(close,emaLenDaily))
 chopDaily= request.security(syminfo.tickerid,"D",  f_chop(chopLengthDaily))
 
+// MACD и RSI с таймфрейма 4H
 [macd4h,signal4h,_] = request.security(syminfo.tickerid,"240",
      ta.macd(close,macdFastLen,macdSlowLen,macdSigLen))
 rsi4h = request.security(syminfo.tickerid,"240", ta.rsi(close,rsiLen4h))
 
+// Данные по объёмам с 15‑минуток
 vol15m     = request.security(syminfo.tickerid,"15", volume)
 volMA15m   = request.security(syminfo.tickerid,"15", ta.sma(volume,volLen15m))
 obvRaw     = ta.cum(math.sign(ta.change(close))*volume)
 obv15m     = request.security(syminfo.tickerid,"15", ta.ema(obvRaw,obvLen))
 
+// Полосы Боллинджера и ATR
 bbMid      = request.security(syminfo.tickerid,"15", ta.sma(close,bbPeriod))
 bbStd      = request.security(syminfo.tickerid,"15", ta.stdev(close,bbPeriod))
 bbUpper    = bbMid + bbStd*bbDev
@@ -113,6 +132,9 @@ atr15m     = request.security(syminfo.tickerid,"15", ta.atr(atrPeriod15m))
 [o15,c15,h15,l15] = request.security(syminfo.tickerid,"15",[open,close,high,low])
 
 // ───────── 5.  Сигналы ───────────────────────────────────────────────
+// Формирование условий входа в позицию
+
+// Свечные модели на 15‑минутках
 bullishEngulf = useBullEngulf and c15[1]<o15[1] and c15>o15 and c15>=o15[1] and o15<=c15[1]
 bearishEngulf = useBearEngulf and c15[1]>o15[1] and c15<o15 and c15<=o15[1] and o15>=c15[1]
 bullPinBar    = usePinBar and f_bPin(o15,h15,l15,c15)
@@ -120,6 +142,7 @@ bearPinBar    = usePinBar and f_sPin(o15,h15,l15,c15)
 bullPattern   = bullishEngulf or bullPinBar
 bearPattern   = bearishEngulf or bearPinBar
 
+// Дополнительные фильтры
 bullTrendDaily = close>dailyEMA and chopDaily<chopThreshTrend
 bearTrendDaily = close<dailyEMA and chopDaily<chopThreshTrend
 bullImpulse4h  = macd4h>signal4h and rsi4h>rsiOB
@@ -129,6 +152,7 @@ obvGrowing     = obv15m > obv15m[1]
 safeBBzone     = close < bbUpper*0.99 and close > bbLower*1.01
 atrFilter      = (high-low) > atr15m * atrMult15m
 
+// Итоговое условие лонг‑сигнала
 longSignal  = ((not useDailyTrendChop) or bullTrendDaily) and
               ((not useMACDRSI)        or bullImpulse4h)  and
               ((not useVolSpike)       or volSpike)       and
@@ -137,6 +161,7 @@ longSignal  = ((not useDailyTrendChop) or bullTrendDaily) and
               ((not useATR)            or atrFilter)      and
               ((not useCandlePatterns) or bullPattern)
 
+// Итоговое условие шорт‑сигнала
 shortSignal = ((not useDailyTrendChop) or bearTrendDaily) and
               ((not useMACDRSI)        or bearImpulse4h)  and
               ((not useVolSpike)       or volSpike)       and
@@ -146,19 +171,23 @@ shortSignal = ((not useDailyTrendChop) or bearTrendDaily) and
               ((not useCandlePatterns) or bearPattern)
 
 // ───────── 6.  Переменные состояния ──────────────────────────────────
-var bool   waiting  = false
-var bool   waitLong = false
-var int    waitBar  = na
-var float  waitPx   = na
-//var int  waitSLP   = na
+// Здесь храним информацию о выставленной заявке и позиции
+var bool   waiting  = false     // есть ли лимитный ордер
+var bool   waitLong = false     // направление ожидаемой сделки
+var int    waitBar  = na        // бар установки ордера
+var float  waitPx   = na        // цена лимитки
+//var int  waitSLP   = na       // зарезервировано
 var string orderId  = ""
-var int    lastExit = na
+var int    lastExit = na        // индекс последнего закрытия позиции
 
+// Цвет бара для подсветки событий
 var color  barClr = na
 barClr := na
 prevPos = nz(strategy.position_size[1], 0)
 
 // ───────── 7.  Расчёт qty по риску ───────────────────────────────────
+// Функция вычисляет размер позиции исходя из текущего капитала и
+// допустимого процента риска.
 calcQty(price, slPerc)=>
     riskUSD = strategy.equity * riskPerc / 100
     stopUSD = price * slPerc / 100
@@ -168,6 +197,7 @@ calcQty(price, slPerc)=>
     math.max(math.round(qty/qtyStep)*qtyStep, qtyStep)
 
 // ───────── 8.  Отмена просроченных лимиток ───────────────────────────
+// Если лимитный ордер не был исполнен за отведённое время, отменяем его
 if waiting and strategy.position_size==0 and (bar_index - waitBar) >= entryTimeout
     strategy.cancel(orderId)
     waiting := false
@@ -178,6 +208,8 @@ if waiting and strategy.position_size==0 and (bar_index - waitBar) >= entryTimeo
     barClr := color.orange
 
 // ───────── 9.  Постановка новой лимит‑заявки ─────────────────────────
+// После завершения предыдущей сделки и выдержки cooldown выставляем
+// новый лимитный ордер по цене открытия текущего бара.
 coolReady = na(lastExit) or (bar_index - lastExit) >= cooldownBars
 if strategy.position_size==0 and not waiting and coolReady and (longSignal or shortSignal)
     waitLong := longSignal
@@ -205,6 +237,7 @@ if strategy.position_size==0 and not waiting and coolReady and (longSignal or sh
     barClr := clr
     
 // ───────── 10.  Позиция открылась ────────────────────────────────────
+// Срабатывает, когда лимитный ордер исполнился и появилась позиция
 if strategy.position_size!=0 and prevPos==0
     waiting := false
     bool longPos = strategy.position_size > 0
@@ -238,6 +271,7 @@ if strategy.position_size!=0 and prevPos==0
     barClr := color.lime
 
 // ───────── 11.  Выход и cooldown ─────────────────────────────────────
+// После закрытия позиции фиксируем результат и начинаем отсчёт cooldown
 if strategy.position_size==0 and prevPos!=0
     idx   = strategy.closedtrades - 1
     exitP = strategy.closedtrades.exit_price(idx)
@@ -255,6 +289,7 @@ if strategy.position_size==0 and prevPos!=0
     lastExit := bar_index
 
 // ───────── 12.  Маркеры сигнала + barcolor ───────────────────────────
+// Отображение буквенных отметок "L" и "S" на барах с сигналом
 if showMark and longSignal
     label.new(bar_index, high*1.01, "L",
               xloc=xloc.bar_index, yloc=yloc.price,
@@ -266,4 +301,5 @@ if showMark and shortSignal
               style=label.style_label_down, size=size.tiny,
               color=color.red)
 
+// Подсветка баров цветом в зависимости от события
 barcolor(colorBars ? barClr : na)
