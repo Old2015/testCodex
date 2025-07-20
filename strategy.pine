@@ -317,7 +317,7 @@ if strategy.position_size!=0 and prevPos==0
 // ───────── 10a.  Частичная фиксация прибыли ───────────────────────────
 if takePartial and not partialDone and strategy.position_size!=0
     target = longPosVar ? entryP*(1 + slPrcnt*partialXR/100)
-                        : entryP*(1 - slPrcnt*partialXR/100)
+                         : entryP*(1 - slPrcnt*partialXR/100)
     reached = longPosVar ? high>=target : low<=target
     if reached
         // ► ALERT: частичная фиксация
