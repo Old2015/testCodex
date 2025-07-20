@@ -45,6 +45,12 @@ cooldownBars    = input.int (10 , "Cooldown bars after exit",  1)
 colorBars       = input.bool(true , "Color bars?")
 showMark        = input.bool(true , "Show L/S markers?")
 
+// Настройки частичной фиксации прибыли
+takePartial     = input.bool(true , "Частично фиксируем прибыль ?")
+partialXR       = input.float(1.0 , "Фиксируем прибыль, на xR", step=0.1)
+partialPercent  = input.float(50.0, "Фиксируем прибыль в процентах", step=1)
+moveToBE        = input.bool(true , "После частичной фиксации переводим в б/у?")
+
 // ───────── 2.  Фильтры и параметры индикаторов (как в индикаторе) ───
 // Настройки фильтров, полностью совпадающих с индикатором
 emaLenDaily       = input.int  (200, "EMA (Daily)")      // период дневной EMA
@@ -185,6 +191,13 @@ var color  barClr = na
 barClr := na
 prevPos = nz(strategy.position_size[1], 0)
 
+// Данные активной сделки
+var float entryP      = na   // цена входа
+var float slPrcnt     = na   // размер стопа в процентах
+var float tpPriceVar  = na   // цена тейк-профита
+var bool  longPosVar  = false// направление позиции
+var bool  partialDone = false// фиксация прибыли выполнена
+
 // ───────── 7.  Расчёт qty по риску ───────────────────────────────────
 // Функция вычисляет размер позиции исходя из текущего капитала и
 // допустимого процента риска.
@@ -250,14 +263,19 @@ if strategy.position_size!=0 and prevPos==0
 
     entryPrice = strategy.position_avg_price
     slPerc     = math.max(baseSL, coefA + coefB * atrNow)
- 
+
+    // Сохраняем параметры сделки для дальнейшего отслеживания
+    entryP      := entryPrice
+    slPrcnt     := slPerc
+    longPosVar  := longPos
     tpMultCur  = longPos ? tpMultLong : tpMultShort
     tpPerc     = slPerc * tpMultCur
-
-    slPrice    = longPos ? entryPrice*(1 - slPerc/100)
-                         : entryPrice*(1 + slPerc/100)
     tpPrice    = longPos ? entryPrice*(1 + tpPerc/100)
                          : entryPrice*(1 - tpPerc/100)
+    tpPriceVar := tpPrice
+    partialDone := false
+    slPrice    = longPos ? entryPrice*(1 - slPerc/100)
+                         : entryPrice*(1 + slPerc/100)
 
     strategy.exit("EXIT", from_entry=orderId, stop=slPrice, limit=tpPrice)
 
@@ -269,6 +287,26 @@ if strategy.position_size!=0 and prevPos==0
          style=longPos?label.style_label_up:label.style_label_down,
          size=size.tiny, color=color.blue, textcolor=color.white)
     barClr := color.blue
+
+// ───────── 10a.  Частичная фиксация прибыли ───────────────────────────
+if takePartial and not partialDone and strategy.position_size!=0
+    target = longPosVar ? entryP*(1 + slPrcnt*partialXR/100)
+                        : entryP*(1 - slPrcnt*partialXR/100)
+    reached = longPosVar ? high>=target : low<=target
+    if reached
+        // ► ALERT: частичная фиксация
+        alert("PARTIAL-"+str.tostring(partialXR)+"R | "+syminfo.ticker,
+              alert.freq_once_per_bar)
+        label.new(bar_index, high*1.01, str.tostring(partialXR)+"R",
+                  xloc=xloc.bar_index, yloc=yloc.price,
+                  style=label.style_label_down, size=size.tiny,
+                  color=color.lime, textcolor=color.black)
+        barClr := color.lime
+        strategy.close(orderId, qty_percent=partialPercent)
+        partialDone := true
+        if moveToBE
+            strategy.exit("EXIT", from_entry=orderId,
+                         stop=entryP, limit=tpPriceVar)
 
 // ───────── 11.  Выход и cooldown ─────────────────────────────────────
 // После закрытия позиции фиксируем результат и начинаем отсчёт cooldown
@@ -287,6 +325,7 @@ if strategy.position_size==0 and prevPos!=0
               color=clr, textcolor=color.white)
     barClr := clr
     lastExit := bar_index
+    partialDone := false
 
 // ───────── 12.  Маркеры сигнала + barcolor ───────────────────────────
 // Отображение буквенных отметок "L" и "S" на барах с сигналом
