@@ -46,7 +46,10 @@ cooldownBars    = input.int (1 , "Cooldown bars after exit",  1)
 // showMark  – отображать ли буквы "L"/"S" над барами с сигналом.
 colorBars       = input.bool(true , "Color bars?")
 showMark        = input.bool(true , "Show L/S markers?")
-partXR          = input.float(1.5 , "Alert at partial profit xR", step=0.1)
+takePartial     = input.bool(true ,  "Частично фиксируем прибыль ?")
+partialXR       = input.float(1.0 , "Фиксируем прибыль, на xR", step=0.1)
+partialPercent  = input.float(50.0, "Фиксируем прибыль в процентах", step=1)
+moveToBE        = input.bool(true ,  "После частичной фиксации переводим в б/у?")
 
 // Начальная величина капитала, необходимая для расчёта размера позиции
 // при имитации стратегии в индикаторе.
@@ -304,8 +307,9 @@ if waiting and pos==0 and bar_index > waitBar
              color = color.blue, style = line.style_dashed)
         // Расчёт уровня частичной прибыли
         riskAbs = entryPrice * (slPerc / 100)
-        partialLvl := partXR > 0 ? (pos==1 ? entryPrice + riskAbs * partXR
-                                      : entryPrice - riskAbs * partXR) : na
+        partialLvl := (takePartial and partialXR > 0) ?
+             (pos==1 ? entryPrice + riskAbs * partialXR
+                     : entryPrice - riskAbs * partialXR) : na
         partialHit := false
         // Алерт о фактическом входе в позицию
         alert(
@@ -332,16 +336,16 @@ if pos != 0
     line.set_xy2(tpLine, bar_index, tpPrice)
     line.set_xy2(entryLine, bar_index, entryPrice)
     // Частичная фиксация прибыли при достижении xR
-    if not partialHit and partXR > 0
+    if not partialHit and takePartial and partialXR > 0
         bool touch = (pos==1 and high >= partialLvl) or (pos==-1 and low <= partialLvl)
         if touch
             alert(
-                 "PARTIAL-" + str.tostring(partXR) + "R | " + syminfo.ticker + " @ " + str.tostring(partialLvl, format.price),
+                 "PARTIAL-" + str.tostring(partialXR) + "R | " + syminfo.ticker + " @ " + str.tostring(partialLvl, format.price),
                  alert.freq_once_per_bar)
             label.new(
                  bar_index,
                  high,
-                 str.tostring(partXR) + "R",
+                 str.tostring(partialXR) + "R",
                  xloc = xloc.bar_index,
                  yloc = yloc.price,
                  style = label.style_label_down,
@@ -349,6 +353,15 @@ if pos != 0
                  color = color.new(color.lime, 0),
                  textcolor = color.black)
             barClr := color.new(color.lime, 80)
+            // фиксация части позиции в виртуальном счёте
+            qtyPart = qty * partialPercent / 100
+            profitPart = pos==1 ? (partialLvl - entryPrice) * qtyPart : (entryPrice - partialLvl) * qtyPart
+            equity += profitPart
+            qty -= qtyPart
+            if moveToBE
+                slPrice := entryPrice
+                line.set_xy1(slLine, bar_index, slPrice)
+                line.set_xy2(slLine, bar_index, slPrice)
             partialHit := true
     bool hitSL = (pos==1 and low <= slPrice) or (pos==-1 and high >= slPrice)
     bool hitTP = (pos==1 and high >= tpPrice) or (pos==-1 and low <= tpPrice)
