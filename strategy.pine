@@ -1,4 +1,4 @@
-//@version=6
+//@version=5
 // ╔════════════════════════════════════════════════════════════════════╗
 // ║  BTC‑2 • Risk‑Sizing + Dynamic‑SL • limit‑entry + cooldown        ║
 // ║                                                                  ║
@@ -354,7 +354,7 @@ if takePartial and not partialDone and strategy.position_size!=0
 if strategy.position_size==0 and prevPos!=0
     idx   = strategy.closedtrades - 1
     exitP = strategy.closedtrades.exit_price(idx)
-    entryP= strategy.closedtrades.entry_price(idx)
+    entryP := strategy.closedtrades.entry_price(idx)
     bool wasLong = prevPos>0
     hitSL = (wasLong and exitP < entryP) or (not wasLong and exitP > entryP)
 
