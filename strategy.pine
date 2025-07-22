@@ -25,13 +25,13 @@ strategy(
 // Базовые настройки управления капиталом и стоп‑приказами
 riskPerc        = input.float(1.0 , "Risk per trade (%)", step=0.1)
 atrLen          = input.int  (100 , "ATR length")
-coefA           = input.float(0.84 , "Dyn‑SL: intercept a", step=0.01)
+coefA           = input.float(0.56 , "Dyn‑SL: intercept a", step=0.01)
 coefB           = input.float(0.0035,"Dyn‑SL: slope b"     , step=0.0001)
-baseSL          = input.float(1.0 , "Base SL (%)", step=0.1)
+baseSL          = input.float(1.5 , "Base SL (%)", step=0.1)
 
 // Множители тейк‑профита для лонга и шорта
-tpMultLong      = input.float(4.0 , "TP multiple LONG",  step=0.1)
-tpMultShort     = input.float(2.0 , "TP multiple SHORT", step=0.1)
+tpMultLong      = input.float(4.5 , "TP multiple LONG",  step=0.1)
+tpMultShort     = input.float(3.1 , "TP multiple SHORT", step=0.1)
 
 // Минимальный шаг контракта
 qtyStep         = input.float(0.001,"Lot step (BTC)", step=0.0001)
@@ -46,10 +46,10 @@ colorBars       = input.bool(true , "Color bars?")
 showMark        = input.bool(true , "Show L/S markers?")
 
 // Настройки частичной фиксации прибыли
-takePartial     = input.bool(false , "Частично фиксируем прибыль ?")
-partialXR       = input.float(1.0 , "Фиксируем прибыль, на xR", step=0.1)
-partialPercent  = input.float(50.0, "Фиксируем прибыль в процентах", step=1)
-moveToBE        = input.bool(false , "После частичной фиксации переводим в б/у?")
+takePartial     = input.bool(true , "Частично фиксируем прибыль ?")
+partialXR       = input.float(2.0 , "Фиксируем прибыль, на xR", step=0.1)
+partialPercent  = input.float(1.0, "Фиксируем прибыль в процентах", step=1)
+moveToBE        = input.bool(true , "После частичной фиксации переводим в б/у?")
 
 // ───────── 2.  Фильтры и параметры индикаторов (как в индикаторе) ───
 // Настройки фильтров, полностью совпадающих с индикатором

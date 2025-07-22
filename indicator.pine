@@ -24,14 +24,14 @@ indicator(
 // baseSL    – минимальный размер стоп‑лосса в процентах.
 riskPerc        = input.float(1.0 , "Risk per trade (%)", step=0.1)
 atrLen          = input.int  (100 , "ATR length")
-coefA           = input.float(0.84 , "Dyn‑SL: intercept a", step=0.01)
+coefA           = input.float(0.56 , "Dyn‑SL: intercept a", step=0.01)
 coefB           = input.float(0.0035,"Dyn‑SL: slope b"     , step=0.0001)
-baseSL          = input.float(1.0 , "Base SL (%)", step=0.1)
+baseSL          = input.float(1.5 , "Base SL (%)", step=0.1)
 
 // tpMultLong/Short задают множители для вычисления тейк‑профита
 // относительно размера стопа. Для лонгов тейк больше, чем для шортов.
-tpMultLong      = input.float(4.0 , "TP multiple LONG",  step=0.1)
-tpMultShort     = input.float(2.0 , "TP multiple SHORT", step=0.1)
+tpMultLong      = input.float(4.5 , "TP multiple LONG",  step=0.1)
+tpMultShort     = input.float(3.1 , "TP multiple SHORT", step=0.1)
 
 // минимальный шаг размера позиции (используется при округлении qty)
 qtyStep         = input.float(0.001,"Lot step (BTC)", step=0.0001)
@@ -47,8 +47,8 @@ cooldownBars    = input.int (1 , "Cooldown bars after exit",  1)
 colorBars       = input.bool(true , "Color bars?")
 showMark        = input.bool(true , "Show L/S markers?")
 takePartial     = input.bool(true ,  "Частично фиксируем прибыль ?")
-partialXR       = input.float(1.0 , "Фиксируем прибыль, на xR", step=0.1)
-partialPercent  = input.float(50.0, "Фиксируем прибыль в процентах", step=1)
+partialXR       = input.float(2.0 , "Фиксируем прибыль, на xR", step=0.1)
+partialPercent  = input.float(1.0, "Фиксируем прибыль в процентах", step=1)
 moveToBE        = input.bool(true ,  "После частичной фиксации переводим в б/у?")
 
 // Начальная величина капитала, необходимая для расчёта размера позиции
