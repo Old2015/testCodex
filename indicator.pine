@@ -97,6 +97,12 @@ useOBV            = input.bool(true ,"Filter: OBV growing")
 useBollinger      = input.bool(false,"Filter: Bollinger zone")
 useATR            = input.bool(true ,"Filter: ATR range")
 useCandlePatterns = input.bool(true ,"Filter: Candle patterns")
+useADX            = input.bool(false,"Filter: ADX >= 20")
+useATRRange       = input.bool(false,"Filter: ATR(14) >= 0.8%")
+useBodySize       = input.bool(false,"Filter: Body < 1/2 stop")
+useHTFTrend       = input.bool(false,"Filter: 4H EMA trend")
+useSession        = input.bool(false,"Filter: Session time")
+useConfirmBar     = input.bool(false,"Entry: 1-bar confirm")
 
 // ───────── 3.  helper‑функции ────────────────────────────────────────
 // Небольшие вспомогательные функции для расчётов
@@ -154,6 +160,17 @@ atr15m     = request.security(syminfo.tickerid,"15", ta.atr(atrPeriod15m))
 
 [o15,c15,h15,l15] = request.security(syminfo.tickerid,"15",[open,close,high,low])
 
+// Дополнительные данные для новых фильтров
+adx14  = ta.adx(14)
+atr14  = ta.atr(14)
+slPercSig = math.max(baseSL, coefA + coefB * atrNow)
+stopDist  = close * slPercSig / 100
+bodySize  = math.abs(close - open)
+close4h   = request.security(syminfo.tickerid, "240", close)
+ema50_4h  = request.security(syminfo.tickerid, "240", ta.ema(close, 50))
+inAsianThin = not na(time(timeframe.period, "0000-0400", "UTC"))
+inUSOpeningWhipsaw = not na(time(timeframe.period, "1200-1300", "UTC"))
+
 // ───────── 5.  Сигналы ───────────────────────────────────────────────
 // Формирование торговых сигналов на основе полученных данных.
 
@@ -174,24 +191,46 @@ volSpike       = vol15m > volMA15m * volSpikeFactor
 obvGrowing     = obv15m > obv15m[1]
 safeBBzone     = close < bbUpper*0.99 and close > bbLower*1.01
 atrFilter      = (high-low) > atr15m * atrMult15m
+adxOK          = adx14 >= 20
+atrOK          = atr14 >= 0.008 * close
+bodyOK         = bodySize < 0.5 * stopDist
+trendOKLong    = close4h > ema50_4h
+trendOKShort   = close4h < ema50_4h
+sessionOK      = not (inAsianThin or inUSOpeningWhipsaw)
 
 // Итоговое условие лонг‑сигнала. Каждый фильтр можно отключить.
-longSignal = ((not useDailyTrendChop) or bullTrendDaily) and
-     ((not useMACDRSI)        or bullImpulse4h)  and
-     ((not useVolSpike)       or volSpike)       and
-     ((not useOBV)            or obvGrowing)     and
-     ((not useBollinger)      or safeBBzone)     and
-     ((not useATR)            or atrFilter)      and
-     ((not useCandlePatterns) or bullPattern)
+longCond = ((not useDailyTrendChop) or bullTrendDaily) and
+           ((not useMACDRSI)        or bullImpulse4h)  and
+           ((not useVolSpike)       or volSpike)       and
+           ((not useOBV)            or obvGrowing)     and
+           ((not useBollinger)      or safeBBzone)     and
+           ((not useATR)            or atrFilter)      and
+           ((not useCandlePatterns) or bullPattern)    and
+           ((not useADX)            or adxOK)          and
+           ((not useATRRange)       or atrOK)          and
+           ((not useBodySize)       or bodyOK)         and
+           ((not useHTFTrend)       or trendOKLong)    and
+           ((not useSession)        or sessionOK)
 
-// Условие шорт‑сигнала
-shortSignal = ((not useDailyTrendChop) or bearTrendDaily) and
-     ((not useMACDRSI)        or bearImpulse4h)  and
-     ((not useVolSpike)       or volSpike)       and
-     ((not useOBV)            or not obvGrowing) and
-     ((not useBollinger)      or safeBBzone)     and
-     ((not useATR)            or atrFilter)      and
-     ((not useCandlePatterns) or bearPattern)
+shortCond = ((not useDailyTrendChop) or bearTrendDaily) and
+            ((not useMACDRSI)        or bearImpulse4h)  and
+            ((not useVolSpike)       or volSpike)       and
+            ((not useOBV)            or not obvGrowing) and
+            ((not useBollinger)      or safeBBzone)     and
+            ((not useATR)            or atrFilter)      and
+            ((not useCandlePatterns) or bearPattern)    and
+            ((not useADX)            or adxOK)          and
+            ((not useATRRange)       or atrOK)          and
+            ((not useBodySize)       or bodyOK)         and
+            ((not useHTFTrend)       or trendOKShort)   and
+            ((not useSession)        or sessionOK)
+
+bodyPrev = math.abs(close[1] - open[1])
+confirmLong = close > (close[1] - 0.25 * bodyPrev)
+confirmShort = close < (close[1] + 0.25 * bodyPrev)
+
+longSignal = useConfirmBar ? (longCond[1] and confirmLong) : longCond
+shortSignal = useConfirmBar ? (shortCond[1] and confirmShort) : shortCond
 
 // ───────── 6.  Состояние для симуляции ───────────────────────────────
 // Переменные, хранящие состояние "виртуальной" позиции. Благодаря им
