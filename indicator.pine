@@ -1,4 +1,4 @@
-//@version=5
+//@version=6
 // ╔════════════════════════════════════════════════════════════════════╗
 // ║  BTC‑2 • Risk‑Sizing + Dynamic‑SL • limit‑entry + cooldown (IND)   ║
 // ║  Индикатор на основе стратегии                                     ║
@@ -127,6 +127,20 @@ f_sPin(_o,_h,_l,_c)=>
 // Форматирование процента с двумя знаками после запятой
 fmtPct(x)=> str.tostring(math.round(x*100)/100, "#.##")
 
+// Расчёт ADX для заданного периода
+f_adx(_len)=>
+    upMove   = high - high[1]
+    downMove = low[1] - low
+    plusDM   = (upMove > downMove and upMove > 0) ? upMove : 0
+    minusDM  = (downMove > upMove and downMove > 0) ? downMove : 0
+    tr       = math.max(math.max(high - low, math.abs(high - close[1])),
+                        math.abs(low - close[1]))
+    atr      = ta.rma(tr, _len)
+    plusDI   = 100 * ta.rma(plusDM, _len) / atr
+    minusDI  = 100 * ta.rma(minusDM, _len) / atr
+    dx       = 100 * math.abs(plusDI - minusDI) / (plusDI + minusDI)
+    ta.rma(dx, _len)
+
 // ───────── 4.  HTF‑данные ────────────────────────────────────────────
 // Получение данных со старших таймфреймов (HTF). Эти значения используются
 // в фильтрах сигналов и для расчёта динамического стоп‑лосса.
@@ -161,7 +175,7 @@ atr15m     = request.security(syminfo.tickerid,"15", ta.atr(atrPeriod15m))
 [o15,c15,h15,l15] = request.security(syminfo.tickerid,"15",[open,close,high,low])
 
 // Дополнительные данные для новых фильтров
-adx14  = ta.adx(14)
+adx14  = f_adx(14)
 atr14  = ta.atr(14)
 slPercSig = math.max(baseSL, coefA + coefB * atrNow)
 stopDist  = close * slPercSig / 100
