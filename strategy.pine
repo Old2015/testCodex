@@ -1,17 +1,17 @@
 //@version=6
 // ╔════════════════════════════════════════════════════════════════════╗
-// ║  BTC‑2 • Risk‑Sizing + Dynamic‑SL • limit‑entry + cooldown        ║
-// ║                                                                  ║
-// ║  Это полноценная торговая стратегия. Она выставляет лимитные      ║
-// ║  ордера по цене открытия сигнального бара и сопровождает позицию  ║
+// ║  BTC‑2 • Risk‑Sizing + Dynamic‑SL • limit‑entry + cooldown         ║
+// ║  old2015@gmail.com                                                 ║
+// ║  Это полноценная торговая стратегия. Она выставляет лимитные       ║
+// ║  ордера по цене открытия сигнального бара и сопровождает позицию   ║
 // ║  динамическим стопом и тейк‑профитом. Размер позиции вычисляется   ║
 // ║  исходя из заданного процента риска от капитала.                   ║
-// ║                                                                  ║
-// ║  Алерты информируют о постановке заявки и о входе в позицию.      ║
+// ║                                                                    ║
+// ║  Алерты информируют о постановке заявки и о входе в позицию.       ║
 // ╚════════════════════════════════════════════════════════════════════╝
 strategy(
-     title               = "strat BTC2 • Risk‑Sizing + Dyn‑SL (limit+cooldown)",
-     shorttitle          = "strat BTC2_RISK_DSL",
+     title               = "strat BTC_m15 • Risk‑Sizing + Dyn‑SL (limit+cooldown)",
+     shorttitle          = "strat BTC_m15_DSL",
      overlay             = true,
      default_qty_type    = strategy.fixed,
      default_qty_value   = 0,
@@ -47,8 +47,8 @@ showMark        = input.bool(true , "Show L/S markers?")
 
 // Настройки частичной фиксации прибыли
 takePartial     = input.bool(true , "Частично фиксируем прибыль ?")
-partialXR       = input.float(2.0 , "Фиксируем прибыль, на xR", step=0.1)
-partialPercent  = input.float(1.0, "Фиксируем прибыль в процентах", step=1)
+partialXR       = input.float(2.1 , "Фиксируем прибыль, на xR", step=0.1)
+partialPercent  = input.float(10.0, "Фиксируем прибыль в процентах", step=1)
 moveToBE        = input.bool(true , "После частичной фиксации переводим в б/у?")
 
 // ───────── 2.  Фильтры и параметры индикаторов (как в индикаторе) ───

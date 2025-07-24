@@ -2,16 +2,16 @@
 // ╔════════════════════════════════════════════════════════════════════╗
 // ║  BTC‑2 • Risk‑Sizing + Dynamic‑SL • limit‑entry + cooldown (IND)   ║
 // ║  Индикатор на основе стратегии                                     ║
-// ║                                                                    ║
+// ║  old2015@gmail.com                                                 ║
 // ║  Данный файл реализует визуальный индикатор, повторяющий логику    ║
 // ║  одноимённой стратегии. Здесь нет реальных сделок, но все          ║
 // ║  вычисления размеров позиций, стопов и тейк‑профитов совпадают     ║
 // ║  со стратегией. Индикатор отображает лимитные заявки, точки        ║
-// ║  входа, стоп‑лоссы и тейк‑профиты с помощью линий и меток.         ║
+// ║  входа,  стоп‑лоссы и тейк‑профиты с помощью линий и меток.        ║
 // ╚════════════════════════════════════════════════════════════════════╝
 indicator(
-     title            = "ind BTC2 • Risk‑Sizing + Dyn‑SL (limit+cooldown)",
-     shorttitle       = "ind BTC2_RISK_DSL_IND",
+     title            = "ind BTC_m15 • Risk‑Sizing + Dyn‑SL (limit+cooldown)",
+     shorttitle       = "ind BTC_m15_DSL_IND",
      overlay          = true,
      max_labels_count = 500)
 
@@ -47,8 +47,8 @@ cooldownBars    = input.int (1 , "Cooldown bars after exit",  1)
 colorBars       = input.bool(true , "Color bars?")
 showMark        = input.bool(true , "Show L/S markers?")
 takePartial     = input.bool(true ,  "Частично фиксируем прибыль ?")
-partialXR       = input.float(2.0 , "Фиксируем прибыль, на xR", step=0.1)
-partialPercent  = input.float(1.0, "Фиксируем прибыль в процентах", step=1)
+partialXR       = input.float(2.2 , "Фиксируем прибыль, на xR", step=0.1)
+partialPercent  = input.float(10.0, "Фиксируем прибыль в процентах", step=1)
 moveToBE        = input.bool(true ,  "После частичной фиксации переводим в б/у?")
 
 // Начальная величина капитала, необходимая для расчёта размера позиции
