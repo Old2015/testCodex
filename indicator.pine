@@ -129,30 +129,41 @@ fmtPct(x)=> str.tostring(math.round(x*100)/100, "#.##")
 atrNow   = ta.atr(atrLen)
 
 // Дневная EMA и индекс "пила" на дневке
-dailyEMA = request.security(syminfo.tickerid,"D",  ta.ema(close,emaLenDaily))
-chopDaily= request.security(syminfo.tickerid,"D",  f_chop(chopLengthDaily))
+dailyEMA = request.security(syminfo.tickerid,"D",  ta.ema(close,emaLenDaily),
+     lookahead = barmerge.lookahead_off)
+chopDaily= request.security(syminfo.tickerid,"D",  f_chop(chopLengthDaily),
+     lookahead = barmerge.lookahead_off)
 
 // MACD и RSI с четырёхчасового таймфрейма
 [macd4h, signal4h, _] = request.security(
      syminfo.tickerid,
      "240",
-     ta.macd(close, macdFastLen, macdSlowLen, macdSigLen))
-rsi4h = request.security(syminfo.tickerid,"240", ta.rsi(close,rsiLen4h))
+     ta.macd(close, macdFastLen, macdSlowLen, macdSigLen),
+     lookahead = barmerge.lookahead_off)
+rsi4h = request.security(syminfo.tickerid,"240", ta.rsi(close,rsiLen4h),
+     lookahead = barmerge.lookahead_off)
 
 // Объём и OBV с 15‑минуток
-vol15m     = request.security(syminfo.tickerid,"15", volume)
-volMA15m   = request.security(syminfo.tickerid,"15", ta.sma(volume,volLen15m))
+vol15m     = request.security(syminfo.tickerid,"15", volume,
+     lookahead = barmerge.lookahead_off)
+volMA15m   = request.security(syminfo.tickerid,"15", ta.sma(volume,volLen15m),
+     lookahead = barmerge.lookahead_off)
 obvRaw     = ta.cum(math.sign(ta.change(close))*volume)
-obv15m     = request.security(syminfo.tickerid,"15", ta.ema(obvRaw,obvLen))
+obv15m     = request.security(syminfo.tickerid,"15", ta.ema(obvRaw,obvLen),
+     lookahead = barmerge.lookahead_off)
 
 // Полосы Боллинджера и ATR на 15‑м таймфрейме
-bbMid      = request.security(syminfo.tickerid,"15", ta.sma(close,bbPeriod))
-bbStd      = request.security(syminfo.tickerid,"15", ta.stdev(close,bbPeriod))
+bbMid      = request.security(syminfo.tickerid,"15", ta.sma(close,bbPeriod),
+     lookahead = barmerge.lookahead_off)
+bbStd      = request.security(syminfo.tickerid,"15", ta.stdev(close,bbPeriod),
+     lookahead = barmerge.lookahead_off)
 bbUpper    = bbMid + bbStd*bbDev
 bbLower    = bbMid - bbStd*bbDev
-atr15m     = request.security(syminfo.tickerid,"15", ta.atr(atrPeriod15m))
+atr15m     = request.security(syminfo.tickerid,"15", ta.atr(atrPeriod15m),
+     lookahead = barmerge.lookahead_off)
 
-[o15,c15,h15,l15] = request.security(syminfo.tickerid,"15",[open,close,high,low])
+[o15,c15,h15,l15] = request.security(syminfo.tickerid,"15", [open,close,high,low],
+     lookahead = barmerge.lookahead_off)
 
 // ───────── 5.  Сигналы ───────────────────────────────────────────────
 // Формирование торговых сигналов на основе полученных данных.
