@@ -219,6 +219,7 @@ var float  slPrice = na      // текущий стоп‑лосс
 var float  tpPrice = na      // текущий тейк‑профит
 var line   entryLine = na
 var line   slLine = na
+var line   slLineBE = na  // линия стопа после перевода в безубыток
 var line   tpLine = na
 var bool   partialHit = false  // достигнут ли xR в текущей сделке
 var float  partialLvl = na     // цена уровня xR
@@ -285,6 +286,7 @@ if pos==0 and not waiting and coolReady and (longSignal or shortSignal)
          bar_index,
          waitLong ? low : high,
          "Limit " + str.tostring(waitPx, format.price) +
+             " qty " + str.tostring(qty) +
              ", SL " + fmtPct(slPerc) + "% " + str.tostring(slLimit, format.price) +
              ", TP " + fmtPct(tpPerc) + "% " + str.tostring(tpLimit, format.price),
          xloc = xloc.bar_index,
@@ -330,6 +332,7 @@ if waiting and pos==0 and bar_index > waitBar
              bar_index,
              waitLong ? low : high,
              "Entry " + str.tostring(entryPrice, format.price) +
+                 " qty " + str.tostring(qty) +
                  ", SL " + fmtPct(slPerc) + "% " + str.tostring(slPrice, format.price) +
                  ", TP " + fmtPct(tpPerc) + "% " + str.tostring(tpPrice, format.price),
              xloc = xloc.bar_index,
@@ -343,7 +346,10 @@ if waiting and pos==0 and bar_index > waitBar
 // ───────── 11.  Проверка выхода ─────────────────────────────────────
 // Когда позиция открыта, проверяем достижение SL или TP
 if pos != 0
-    line.set_xy2(slLine, bar_index, slPrice)
+    if partialHit and moveToBE
+        line.set_xy2(slLineBE, bar_index, slPrice)
+    else
+        line.set_xy2(slLine, bar_index, slPrice)
     line.set_xy2(tpLine, bar_index, tpPrice)
     line.set_xy2(entryLine, bar_index, entryPrice)
     // Частичная фиксация прибыли при достижении xR
@@ -371,8 +377,8 @@ if pos != 0
             qty -= qtyPart
             if moveToBE
                 slPrice := entryPrice
-                line.set_xy1(slLine, bar_index, slPrice)
-                line.set_xy2(slLine, bar_index, slPrice)
+                slLineBE := line.new(bar_index, slPrice, bar_index, slPrice,
+                     color = color.red, style = line.style_dashed)
             partialHit := true
     bool hitSL = (pos==1 and low <= slPrice) or (pos==-1 and high >= slPrice)
     bool hitTP = (pos==1 and high >= tpPrice) or (pos==-1 and low <= tpPrice)
@@ -406,6 +412,7 @@ if pos != 0
         partialHit := false
         partialLvl := na
         slLine := na
+        slLineBE := na
         tpLine := na
         entryLine := na
 
@@ -435,6 +442,7 @@ if pos != 0
                  bar_index,
                  waitLong ? low : high,
                  "Limit " + str.tostring(waitPx, format.price) +
+                     " qty " + str.tostring(qty) +
                      ", SL " + fmtPct(slPerc) + "% " + str.tostring(slLimit, format.price) +
                      ", TP " + fmtPct(tpPerc) + "% " + str.tostring(tpLimit, format.price),
                  xloc = xloc.bar_index,
