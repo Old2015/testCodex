@@ -47,7 +47,7 @@ showMark        = input.bool(true , "Show L/S markers?")
 
 // Настройки частичной фиксации прибыли
 takePartial     = input.bool(true , "Частично фиксируем прибыль ?")
-partialXR       = input.float(2.1 , "Фиксируем прибыль, на xR", step=0.1)
+partialXR       = input.float(2.2 , "Фиксируем прибыль, на xR", step=0.1)
 partialPercent  = input.float(10.0, "Фиксируем прибыль в процентах", step=1)
 moveToBE        = input.bool(true , "После частичной фиксации переводим в б/у?")
 
