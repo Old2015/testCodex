@@ -75,7 +75,7 @@ rsiOS             = input.int(40, "RSI oversold")
 
 // Фильтры на 15‑минутном графике
 volLen15m         = input.int (20, "Volume MA len (15m)")     // период скользящей по объёму
-volSpikeFactor    = input.float(1.5, "Volume spike ×", step=0.1) // множитель "спайка" объёма
+volSpikeFactor    = input.float(1.7, "Volume spike ×", step=0.1) // множитель "спайка" объёма
 obvLen            = input.int (10 , "OBV EMA len (15m)")       // сглаживание OBV
 
 // Настройки полос Боллинджера и фильтра по диапазону

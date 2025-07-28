@@ -67,7 +67,7 @@ rsiOS             = input.int(40, "RSI oversold")
 
 // Параметры объёмных индикаторов на 15‑минутках
 volLen15m         = input.int (20, "Volume MA len (15m)")
-volSpikeFactor    = input.float(1.5, "Volume spike ×", step=0.1)
+volSpikeFactor    = input.float(1.7, "Volume spike ×", step=0.1)
 obvLen            = input.int (10 , "OBV EMA len (15m)")
 
 // Полосы Боллинджера и ATR
